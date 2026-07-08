@@ -19,7 +19,7 @@ export function DashboardFab({ isAdmin }: DashboardFabProps) {
       <DropdownMenuTrigger asChild>
         <Button
           size="icon"
-          className="fixed bottom-6 right-6 z-50 size-14 rounded-full shadow-lg"
+          className="tour-nova-obra fixed bottom-6 right-6 z-50 size-14 rounded-full shadow-lg"
         >
           <Plus className="size-6" />
         </Button>

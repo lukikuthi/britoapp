@@ -13,7 +13,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ObraBottomNav, type ObraTab } from "@/components/obra-bottom-nav";
+import { ObraAnalyticsTab } from "@/components/obra-analytics-tab";
 import { ObraFotografiaTab } from "@/components/obra-fotografia-tab";
+import { ObraEapTab } from "@/components/obra-eap-tab";
+import { ObraProjetosTab } from "@/components/obra-projetos-tab";
+import { TorreMapaView } from "@/components/apontamentos/torre-mapa-view";
+import { ObraMateriaisTab } from "@/components/obra-materiais-tab";
+import { ObraComissionamentoTab } from "@/components/obra-comissionamento-tab";
+import { ObraSesmtTab } from "@/components/obra-sesmt-tab";
+import { ObraCronogramaTab } from "@/components/obra-cronograma-tab";
+import { ObraConcretagemTab } from "@/components/obra-concretagem-tab";
+import { ObraFvrTab } from "@/components/obra-fvr-tab";
+import { ObraRncTab } from "@/components/obra-rnc-tab";
+import { ObraBmTab } from "@/components/obra-bm-tab";
+import { useTutorial } from "@/hooks/use-tutorial";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -27,6 +40,7 @@ import {
   Building2,
   AlertCircle,
   CheckCircle2,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { OBRA_STATUS_LABEL } from "@/lib/labels";
@@ -34,7 +48,7 @@ import { OBRA_STATUS_LABEL } from "@/lib/labels";
 export const Route = createFileRoute("/_authenticated/obras/$obraId")({
   head: () => ({ meta: [{ title: "Obra — BRITO ENGENHARIA" }] }),
   validateSearch: (s: Record<string, unknown>): { tab: ObraTab } => ({
-    tab: (["visao", "mapa", "fotografia", "menu"].includes(String(s.tab)) ? s.tab : "visao") as ObraTab,
+    tab: (["visao", "analytics", "mapa", "rdo", "fotografia", "menu", "materiais", "laudos", "sesmt", "cronograma", "concretagem", "fvr", "rnc", "bm"].includes(String(s.tab)) ? s.tab : "visao") as ObraTab,
   }),
   component: ObraDetail,
 });
@@ -42,7 +56,7 @@ export const Route = createFileRoute("/_authenticated/obras/$obraId")({
 function ObraDetail() {
   const { obraId } = Route.useParams();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const childRouteActive = pathname.includes(`/obras/${obraId}/torres/`);
+  const childRouteActive = pathname.includes(`/obras/${obraId}/torres/`) || pathname.includes(`/obras/${obraId}/rdos/`);
 
   if (childRouteActive) {
     return <Outlet />;
@@ -58,6 +72,7 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
   const isCliente = role === "cliente";
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const setStage = useTutorial((s) => s.setStage);
 
   const obra = useQuery({
     queryKey: ["obra", obraId],
@@ -156,11 +171,16 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
   return (
     <div className="pb-24">
       <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4">
-        <Button variant="ghost" size="sm" asChild className="-ml-2">
-          <Link to="/dashboard">
-            <ChevronLeft className="size-4" /> Voltar
-          </Link>
-        </Button>
+        <div className="flex justify-between items-center -ml-2">
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/dashboard">
+              <ChevronLeft className="size-4" /> Voltar
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setStage("obra")}>
+            Ajuda
+          </Button>
+        </div>
 
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
@@ -247,6 +267,53 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
           <MapaTab obraId={obraId} />
         )}
 
+        {tab === "analytics" && (
+          <ObraAnalyticsTab obraId={obraId} />
+        )}
+
+        {tab === "rdo" && (
+          <RdoTab obraId={obraId} />
+        )}
+
+        {tab === "eap" && (
+          <ObraEapTab obraId={obraId} />
+        )}
+
+        {tab === "projetos" && (
+          <ObraProjetosTab obraId={obraId} />
+        )}
+
+        {tab === "sesmt" && (
+          <ObraSesmtTab obraId={obraId} />
+        )}
+        {tab === "cronograma" && (
+          <ObraCronogramaTab obraId={obraId} />
+        )}
+        {tab === "concretagem" && (
+          <ObraConcretagemTab obraId={obraId} />
+        )}
+        {tab === "fvr" && (
+          <ObraFvrTab obraId={obraId} />
+        )}
+        {tab === "rnc" && (
+          <ObraRncTab obraId={obraId} />
+        )}
+        {tab === "bm" && (
+          <ObraBmTab obraId={obraId} />
+        )}
+
+        {tab === "materiais" && (
+          <ObraMateriaisTab obraId={obraId} isAdmin={isAdmin} />
+        )}
+
+        {tab === "laudos" && (
+          <ObraComissionamentoTab obraId={obraId} isAdmin={isAdmin} />
+        )}
+
+        {tab === "sesmt" && (
+          <ObraSesmtTab obraId={obraId} isAdmin={isAdmin} />
+        )}
+
         {tab === "menu" && (
           <ObraMenuTab obraId={obraId} obra={obra.data} isAdmin={isAdmin} isCliente={isCliente} />
         )}
@@ -261,12 +328,16 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
         )}
       </div>
 
-      <ObraBottomNav obraId={obraId} active={tab} />
+      <div className="tour-obra-tabs">
+        <ObraBottomNav obraId={obraId} active={tab} />
+      </div>
     </div>
   );
 }
 
 /* ───────── Tab Mapa (lazy-loads TorreMapaView) ───────── */
+
+import { generateApontamentosPdf } from "@/lib/apontamentos-pdf-generator";
 
 function MapaTab({ obraId }: { obraId: string }) {
   const torresQ = useQuery({
@@ -340,6 +411,9 @@ function MapaTab({ obraId }: { obraId: string }) {
     },
   });
 
+  const navigate = useNavigate();
+  const counts = countsQ.data ?? new Map<string, number>();
+
   if (torresQ.isLoading) {
     return (
       <div className="flex justify-center py-12">
@@ -360,57 +434,81 @@ function MapaTab({ obraId }: { obraId: string }) {
     );
   }
 
-  const navigate = useNavigate();
-  const counts = countsQ.data ?? new Map<string, number>();
+  const handleExportPdf = async () => {
+    try {
+      toast.info("Compilando dados das torres, aguarde...");
+      const { data: obraData } = await supabase.from("obras").select("nome, endereco").eq("id", obraId).single();
+      
+      const allAndarIds = torresQ.data.flatMap((t: any) => t.andares.map((a: any) => a.id));
+      const { data: apontamentos } = await (supabase as any)
+        .from("apontamentos")
+        .select("id, andar_id, pos_x, pos_y, descricao, status")
+        .in("andar_id", allAndarIds)
+        .order("created_at", { ascending: true });
+
+      const apontMap = new Map<string, any[]>();
+      for (const ap of apontamentos ?? []) {
+        if (!apontMap.has(ap.andar_id)) apontMap.set(ap.andar_id, []);
+        apontMap.get(ap.andar_id)!.push({
+          numero: apontMap.get(ap.andar_id)!.length + 1,
+          descricao: ap.descricao,
+          status: ap.status,
+          posX: ap.pos_x,
+          posY: ap.pos_y,
+        });
+      }
+
+      const torresData = [];
+      for (const torre of torresQ.data) {
+        const andaresData = [];
+        for (const andar of torre.andares) {
+          let plantaUrl = "";
+          if (andar.planta_storage_path) {
+            const { data: pUrl } = await supabase.storage.from("plantas-baixa").createSignedUrl(andar.planta_storage_path, 3600);
+            plantaUrl = pUrl?.signedUrl || "";
+          }
+          andaresData.push({
+            numero: andar.numero_andar,
+            apelido: andar.apelido,
+            tipoAndar: andar.tipo_andar,
+            torreNome: torre.nome,
+            plantaUrl,
+            apontamentos: apontMap.get(andar.id) ?? [],
+          });
+        }
+        torresData.push({ nome: torre.nome, andares: andaresData });
+      }
+
+      const pdfBlob = await generateApontamentosPdf({
+        obraNome: obraData?.nome || "Obra",
+        endereco: obraData?.endereco || undefined,
+        torres: torresData,
+      });
+
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Mapa-Torres-${obraData?.nome || obraId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
 
   return (
     <div className="space-y-4">
-      <div className={`grid gap-4 ${torresQ.data.length === 1 ? "" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
-        {torresQ.data.map((torre: any) => (
-          <Card key={torre.id}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Building2 className="size-4 text-primary" />
-                {torre.nome}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              {torre.andares.map((andar: any) => {
-                const abertos = counts.get(andar.id) ?? 0;
-                const tipoColors: Record<string, string> = {
-                  garagem: "bg-muted",
-                  terreo: "bg-accent/10",
-                  tipo: "bg-card",
-                  cobertura: "bg-primary/5",
-                  comercial: "bg-warning/5",
-                };
-                return (
-                  <button
-                    key={andar.id}
-                    type="button"
-                    onClick={() =>
-                      navigate({
-                        to: "/obras/$obraId/torres/$torreId/andares/$andarId",
-                        params: { obraId, torreId: torre.id, andarId: andar.id },
-                      })
-                    }
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md border text-sm font-medium transition-colors hover:bg-muted/50 ${tipoColors[andar.tipo_andar] ?? ""}`}
-                  >
-                    <span>{andar.apelido || `Andar ${andar.numero_andar}`}</span>
-                    {abertos > 0 && (
-                      <Badge variant="destructive" className="text-[0.6rem] px-1.5 py-0 min-w-5 text-center">
-                        {abertos}
-                      </Badge>
-                    )}
-                  </button>
-                );
-              })}
-              {!torre.andares.length && (
-                <p className="text-xs text-muted-foreground italic py-2">Nenhum andar configurado.</p>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold tracking-tight">Estrutura das Torres</h2>
+        <Button size="sm" variant="outline" onClick={handleExportPdf}>
+          <FileDown className="size-4 mr-2" />
+          Exportar Mapa (PDF)
+        </Button>
+      </div>
+      <div className="mt-4">
+        <TorreMapaView obraId={obraId} torres={torresQ.data} apontamentoCounts={counts} />
       </div>
     </div>
   );
@@ -435,6 +533,8 @@ function ObraMenuTab({
   const [equipeOpen, setEquipeOpen] = useState(false);
   const [estruturaOpen, setEstruturaOpen] = useState(false);
   const [docsOpen, setDocsOpen] = useState(false);
+  const [eapOpen, setEapOpen] = useState(false);
+  const [projetosOpen, setProjetosOpen] = useState(false);
 
   const delObra = useMutation({
     mutationFn: async () => {
@@ -451,13 +551,15 @@ function ObraMenuTab({
   const items = [
     { label: "Cadastro da obra", onClick: () => setEditOpen(true), show: isAdmin },
     { label: "Estrutura da obra", onClick: () => setEstruturaOpen(true), show: !isCliente },
+    { label: "Cronograma e EAP", onClick: () => setEapOpen(true), show: !isCliente },
+    { label: "Projetos e Pranchas (CDE)", onClick: () => setProjetosOpen(true), show: true },
     { label: "Usuários com acesso", onClick: () => setEquipeOpen(true), show: isAdmin },
     { label: "Documentos da obra", onClick: () => setDocsOpen(true), show: !isCliente },
   ].filter((i) => i.show);
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="tour-obra-config">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
             <Settings className="size-4" /> Configurações
@@ -513,6 +615,20 @@ function ObraMenuTab({
       {docsOpen && (
         <Dialog open={docsOpen} onOpenChange={setDocsOpen}>
           <ObraDocumentosDialog obraId={obraId} />
+        </Dialog>
+      )}
+      {eapOpen && (
+        <Dialog open={eapOpen} onOpenChange={setEapOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <ObraEapTab obraId={obraId} />
+          </DialogContent>
+        </Dialog>
+      )}
+      {projetosOpen && (
+        <Dialog open={projetosOpen} onOpenChange={setProjetosOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <ObraProjetosTab obraId={obraId} />
+          </DialogContent>
         </Dialog>
       )}
     </div>
@@ -883,9 +999,13 @@ function EstruturaObraDialog({ obraId, onClose }: { obraId: string; onClose: () 
                 ))}
 
                 {grupoForm?.torreId === torre.id ? (
-                  <div className="border rounded p-2 space-y-2">
+                  <div className="border rounded p-3 bg-muted/20 space-y-3">
+                    <div className="text-xs text-muted-foreground pb-2 mb-2 border-b">
+                      <strong>Dica:</strong> Um "Grupo" representa andares que compartilham a <b>mesma planta-baixa</b>.
+                      Se a torre tem uma planta diferente por andar, crie um grupo para cada andar (ex: 1 a 1).
+                    </div>
                     <Input
-                      placeholder="Nome do grupo (ex: Tipo)"
+                      placeholder="Nome do grupo (ex: Pavimentos Tipo)"
                       value={grupoForm.nomeGrupo}
                       onChange={(e) => setGrupoForm({ ...grupoForm, nomeGrupo: e.target.value })}
                     />
@@ -911,14 +1031,17 @@ function EstruturaObraDialog({ obraId, onClose }: { obraId: string; onClose: () 
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="garagem">Garagem</SelectItem>
-                        <SelectItem value="terreo">Térreo</SelectItem>
-                        <SelectItem value="tipo">Tipo</SelectItem>
+                        <SelectItem value="garagem">Garagem / Subsolo</SelectItem>
+                        <SelectItem value="terreo">Térreo / Externo</SelectItem>
+                        <SelectItem value="mezanino">Mezanino / Pilotis / Comum</SelectItem>
+                        <SelectItem value="tipo">Andar Tipo</SelectItem>
+                        <SelectItem value="comercial">Comercial / Loja</SelectItem>
+                        <SelectItem value="tecnica">Área Técnica / Barrilete</SelectItem>
+                        <SelectItem value="subestacao">Subestação / Casa de Força</SelectItem>
                         <SelectItem value="cobertura">Cobertura</SelectItem>
-                        <SelectItem value="comercial">Comercial</SelectItem>
                       </SelectContent>
                     </Select>
-                    <div className="flex gap-2">
+                    <div className="tour-obra-config flex gap-2">
                       <Button variant="ghost" size="sm" onClick={() => setGrupoForm(null)}>
                         Cancelar
                       </Button>
@@ -1027,5 +1150,102 @@ function ObraDocumentosDialog({ obraId }: { obraId: string }) {
         ))}
       </ul>
     </DialogContent>
+  );
+}
+
+/* ───────── Tab RDO ───────── */
+
+import { useRdosDaObra, useCreateRdo } from "@/hooks/use-rdo";
+
+function RdoTab({ obraId }: { obraId: string }) {
+  const { data: rdos, isLoading } = useRdosDaObra(obraId);
+  const createMut = useCreateRdo();
+  const navigate = useNavigate();
+
+  const handleCreate = async () => {
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const rdoExistente = rdos?.find((r) => r.data === today);
+      
+      if (rdoExistente) {
+        toast.info("Você já possui um RDO para a data de hoje. Abrindo RDO existente...");
+        navigate({ to: "/obras/$obraId/rdos/$rdoId", params: { obraId, rdoId: rdoExistente.id } });
+        return;
+      }
+      
+      const rdo = await createMut.mutateAsync({ obra_id: obraId, data: today });
+
+      // Fetch Weather automatically
+      try {
+        const { data: obraData } = await supabase.from("obras").select("latitude, longitude").eq("id", obraId).single();
+        if (obraData && obraData.latitude && obraData.longitude) {
+          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${obraData.latitude}&longitude=${obraData.longitude}&daily=weathercode&timezone=America/Sao_Paulo`);
+          if (res.ok) {
+            const weatherData = await res.json();
+            const code = weatherData?.daily?.weathercode?.[0];
+            let climaStr = "Ensolarado";
+            if (code !== undefined) {
+              if (code >= 1 && code <= 3) climaStr = "Nublado";
+              if (code >= 51 && code <= 99) climaStr = "Chuvoso";
+            }
+            await supabase.from("rdos").update({
+              condicao_tempo_manha: climaStr,
+              condicao_tempo_tarde: climaStr,
+            }).eq("id", rdo.id);
+            toast.success(`Clima automático detectado: ${climaStr}`);
+          }
+        }
+      } catch (weatherErr) {
+        console.error("Falha ao buscar clima automático:", weatherErr);
+      }
+
+      navigate({ to: "/obras/$obraId/rdos/$rdoId", params: { obraId, rdoId: rdo.id } });
+    } catch (e: any) {
+      toast.error("Erro ao criar RDO: " + e.message);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="flex justify-center py-12"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <FileText className="size-4 text-primary" />
+          Relatórios Diários de Obra
+        </CardTitle>
+        <Button size="sm" onClick={handleCreate} disabled={createMut.isPending}>
+          <Plus className="size-4 mr-2" /> Novo RDO
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {!rdos?.length ? (
+          <p className="text-sm text-muted-foreground italic py-4 text-center">Nenhum RDO criado.</p>
+        ) : (
+          <ul className="divide-y">
+            {rdos.map((rdo) => (
+              <li key={rdo.id} className="py-3 flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-sm flex items-center gap-2">
+                    RDO #{rdo.numero_sequencial}
+                    <Badge variant="outline" className={rdo.status === "aprovado" ? "text-success border-success" : ""}>
+                      {rdo.status.toUpperCase()}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {format(new Date(rdo.data), "dd/MM/yyyy")}
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/obras/$obraId/rdos/$rdoId", params: { obraId, rdoId: rdo.id } })}>
+                  <ChevronLeft className="size-4 rotate-180" />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }

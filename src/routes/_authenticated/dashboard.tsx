@@ -4,9 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRole } from "@/hooks/use-auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Loader2, ChevronRight } from "lucide-react";
 import { DashboardFab } from "@/components/dashboard-fab";
 import { OBRA_STATUS_LABEL } from "@/lib/labels";
+
+import { useTutorial } from "@/hooks/use-tutorial";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Obras — BRITO ENGENHARIA" }] }),
@@ -24,6 +27,7 @@ interface ObraRow {
 function Dashboard() {
   const { data: role } = useRole();
   const isAdmin = role === "admin";
+  const startTutorial = useTutorial((s) => s.startTutorial);
 
   const obrasQ = useQuery({
     queryKey: ["obras-dashboard"],
@@ -82,11 +86,36 @@ function Dashboard() {
     },
   });
 
+  const rdosQ = useQuery({
+    queryKey: ["rdos-dashboard", obrasQ.data?.map((o) => o.id).join(",")],
+    enabled: !!obrasQ.data?.length,
+    queryFn: async () => {
+      const ids = obrasQ.data!.map((o) => o.id);
+      const { data, error } = await supabase
+        .from("rdos" as any)
+        .select("id, obra_id, status")
+        .in("obra_id", ids)
+        .neq("status", "aprovado");
+      if (error) throw error;
+
+      const map = new Map<string, number>();
+      for (const r of data ?? []) {
+        map.set(r.obra_id, (map.get(r.obra_id) ?? 0) + 1);
+      }
+      return map;
+    },
+  });
+
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6 pb-24">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Obras</h1>
-        <p className="text-sm text-muted-foreground mt-1">Selecione uma obra para ver o mapa e apontamentos.</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Obras</h1>
+          <p className="text-sm text-muted-foreground mt-1">Selecione uma obra para ver o mapa e apontamentos.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => startTutorial()}>
+          Iniciar Tutorial
+        </Button>
       </div>
 
       {obrasQ.isLoading ? (
@@ -102,7 +131,7 @@ function Dashboard() {
           </CardContent>
         </Card>
       ) : (
-        <ul className="divide-y rounded-lg border bg-card">
+        <ul className="divide-y rounded-lg border bg-card tour-lista-obras">
           {obrasQ.data.map((o) => {
             const abertos = apontQ.data?.get(o.id) ?? 0;
             return (
@@ -131,6 +160,11 @@ function Dashboard() {
                           {abertos} apontamento{abertos !== 1 ? "s" : ""} aberto{abertos !== 1 ? "s" : ""}
                         </span>
                       )}
+                      {(rdosQ.data?.get(o.id) ?? 0) > 0 && (
+                        <span className="text-xs text-amber-500 font-medium">
+                          {rdosQ.data!.get(o.id)} RDO{rdosQ.data!.get(o.id)! !== 1 ? "s" : ""} pendente{rdosQ.data!.get(o.id)! !== 1 ? "s" : ""}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <ChevronRight className="size-5 text-muted-foreground shrink-0" />
@@ -141,7 +175,7 @@ function Dashboard() {
         </ul>
       )}
 
-      {isAdmin && <DashboardFab isAdmin={isAdmin} />}
+      <DashboardFab isAdmin={isAdmin} />
     </div>
   );
 }
