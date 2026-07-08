@@ -117,6 +117,8 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+import { GlobalTutorial } from "@/components/global-tutorial";
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
@@ -125,6 +127,7 @@ function RootComponent() {
       <AuthProvider>
         <AppBoot />
         <Toaster />
+        <GlobalTutorial />
       </AuthProvider>
     </QueryClientProvider>
   );

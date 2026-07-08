@@ -17,6 +17,7 @@ import { Route as AuthenticatedObrasIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedObrasObraIdRouteImport } from './routes/_authenticated/obras.$obraId'
 import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated/admin.usuarios'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
+import { Route as AuthenticatedObrasObraIdRdosRdoIdRouteImport } from './routes/_authenticated/obras.$obraId.rdos.$rdoId'
 import { Route as AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRouteImport } from './routes/_authenticated/obras.$obraId.torres.$torreId.andares.$andarId'
 
 const AuthRoute = AuthRouteImport.update({
@@ -60,6 +61,12 @@ const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
   path: '/admin/audit',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedObrasObraIdRdosRdoIdRoute =
+  AuthenticatedObrasObraIdRdosRdoIdRouteImport.update({
+    id: '/rdos/$rdoId',
+    path: '/rdos/$rdoId',
+    getParentRoute: () => AuthenticatedObrasObraIdRoute,
+  } as any)
 const AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute =
   AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRouteImport.update({
     id: '/torres/$torreId/andares/$andarId',
@@ -75,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/obras/$obraId': typeof AuthenticatedObrasObraIdRouteWithChildren
   '/obras/': typeof AuthenticatedObrasIndexRoute
+  '/obras/$obraId/rdos/$rdoId': typeof AuthenticatedObrasObraIdRdosRdoIdRoute
   '/obras/$obraId/torres/$torreId/andares/$andarId': typeof AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute
 }
 export interface FileRoutesByTo {
@@ -85,6 +93,7 @@ export interface FileRoutesByTo {
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/obras/$obraId': typeof AuthenticatedObrasObraIdRouteWithChildren
   '/obras': typeof AuthenticatedObrasIndexRoute
+  '/obras/$obraId/rdos/$rdoId': typeof AuthenticatedObrasObraIdRdosRdoIdRoute
   '/obras/$obraId/torres/$torreId/andares/$andarId': typeof AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute
 }
 export interface FileRoutesById {
@@ -97,6 +106,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/_authenticated/obras/$obraId': typeof AuthenticatedObrasObraIdRouteWithChildren
   '/_authenticated/obras/': typeof AuthenticatedObrasIndexRoute
+  '/_authenticated/obras/$obraId/rdos/$rdoId': typeof AuthenticatedObrasObraIdRdosRdoIdRoute
   '/_authenticated/obras/$obraId/torres/$torreId/andares/$andarId': typeof AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute
 }
 export interface FileRouteTypes {
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/admin/usuarios'
     | '/obras/$obraId'
     | '/obras/'
+    | '/obras/$obraId/rdos/$rdoId'
     | '/obras/$obraId/torres/$torreId/andares/$andarId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/admin/usuarios'
     | '/obras/$obraId'
     | '/obras'
+    | '/obras/$obraId/rdos/$rdoId'
     | '/obras/$obraId/torres/$torreId/andares/$andarId'
   id:
     | '__root__'
@@ -130,6 +142,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/usuarios'
     | '/_authenticated/obras/$obraId'
     | '/_authenticated/obras/'
+    | '/_authenticated/obras/$obraId/rdos/$rdoId'
     | '/_authenticated/obras/$obraId/torres/$torreId/andares/$andarId'
   fileRoutesById: FileRoutesById
 }
@@ -197,6 +210,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/obras/$obraId/rdos/$rdoId': {
+      id: '/_authenticated/obras/$obraId/rdos/$rdoId'
+      path: '/rdos/$rdoId'
+      fullPath: '/obras/$obraId/rdos/$rdoId'
+      preLoaderRoute: typeof AuthenticatedObrasObraIdRdosRdoIdRouteImport
+      parentRoute: typeof AuthenticatedObrasObraIdRoute
+    }
     '/_authenticated/obras/$obraId/torres/$torreId/andares/$andarId': {
       id: '/_authenticated/obras/$obraId/torres/$torreId/andares/$andarId'
       path: '/torres/$torreId/andares/$andarId'
@@ -208,11 +228,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedObrasObraIdRouteChildren {
+  AuthenticatedObrasObraIdRdosRdoIdRoute: typeof AuthenticatedObrasObraIdRdosRdoIdRoute
   AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute: typeof AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute
 }
 
 const AuthenticatedObrasObraIdRouteChildren: AuthenticatedObrasObraIdRouteChildren =
   {
+    AuthenticatedObrasObraIdRdosRdoIdRoute:
+      AuthenticatedObrasObraIdRdosRdoIdRoute,
     AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute:
       AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute,
   }

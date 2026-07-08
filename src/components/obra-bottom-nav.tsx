@@ -1,18 +1,23 @@
 import { useNavigate } from "@tanstack/react-router";
-import { LayoutGrid, MapPin, Menu, Camera } from "lucide-react";
+import { LayoutGrid, MapPin, Menu, Camera, FileText, Activity, Package, FileCheck, HardHat, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type ObraTab = "visao" | "mapa" | "fotografia" | "menu";
+export type ObraTab = "visao" | "analytics" | "mapa" | "rdo" | "fotografia" | "menu" | "materiais" | "laudos" | "sesmt" | "cronograma" | "concretagem" | "fvr" | "rnc" | "bm";
 
 interface ObraBottomNavProps {
   obraId: string;
   active: ObraTab;
 }
 
-const tabs: { id: ObraTab; label: string; icon: typeof LayoutGrid; search: { tab: ObraTab } }[] = [
-  { id: "visao", label: "Visão geral", icon: LayoutGrid, search: { tab: "visao" } },
-  { id: "mapa", label: "Mapa", icon: MapPin, search: { tab: "mapa" } },
-  { id: "fotografia", label: "Fotografia", icon: Camera, search: { tab: "fotografia" } },
+const tabs: { id: ObraTab; label: string; icon: any; search: { tab: ObraTab } }[] = [
+  { id: "visao", label: "Visão", icon: Activity, search: { tab: "visao" } },
+  { id: "rdo", label: "RDO", icon: FileText, search: { tab: "rdo" } },
+  { id: "mapa", label: "Plantas", icon: MapPin, search: { tab: "mapa" } },
+  { id: "fotografia", label: "Fotos", icon: Camera, search: { tab: "fotografia" } },
+  { id: "materiais", label: "Materiais", icon: Package, search: { tab: "materiais" } },
+  { id: "laudos", label: "Laudos", icon: FileCheck, search: { tab: "laudos" } },
+  { id: "sesmt", label: "SESMT", icon: HardHat, search: { tab: "sesmt" } },
+  { id: "cronograma", label: "Gantt", icon: LayoutGrid, search: { tab: "cronograma" } },
   { id: "menu", label: "Menu", icon: Menu, search: { tab: "menu" } },
 ];
 
@@ -39,6 +44,7 @@ export function ObraBottomNav({ obraId, active }: ObraBottomNavProps) {
                 })
               }
               className={cn(
+                `tour-tab-${t.id}`,
                 "flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[0.65rem] sm:text-xs font-medium transition-colors",
                 isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
               )}
