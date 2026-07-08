@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -74,7 +74,7 @@ function ObrasPage() {
         </div>
         <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setEditing(null); }}>
           <DialogTrigger asChild>
-            <Button onClick={() => setEditing(null)}>
+            <Button className="tour-form-nova" onClick={() => setEditing(null)}>
               <Plus className="size-4" />
               Nova obra
             </Button>
@@ -172,6 +172,8 @@ function ObraDialog({ obra, onClose }: { obra: Obra | null; onClose: () => void 
     },
   });
 
+  const navigate = useNavigate();
+
   const save = useMutation({
     mutationFn: async () => {
       const payload = {
@@ -191,17 +193,30 @@ function ObraDialog({ obra, onClose }: { obra: Obra | null; onClose: () => void 
       if (isEdit) {
         const { error } = await supabase.from("obras").update(payload).eq("id", obra!.id);
         if (error) throw error;
+        return obra!.id;
       } else {
         const { data: u } = await supabase.auth.getUser();
-        const { error } = await supabase.from("obras").insert({ ...payload, criado_por: u.user?.id });
+        const { data, error } = await supabase
+          .from("obras")
+          .insert({ ...payload, criado_por: u.user?.id })
+          .select("id")
+          .single();
         if (error) throw error;
+        return data.id;
       }
     },
-    onSuccess: () => {
+    onSuccess: (newId) => {
       toast.success(isEdit ? "Obra atualizada." : "Obra criada.");
       qc.invalidateQueries({ queryKey: ["obras"] });
       qc.invalidateQueries({ queryKey: ["obras-dashboard"] });
       onClose();
+      if (newId && !isEdit) {
+        navigate({
+          to: "/obras/$obraId",
+          params: { obraId: newId },
+          search: { tab: "visao" } as any,
+        });
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -215,7 +230,7 @@ function ObraDialog({ obra, onClose }: { obra: Obra | null; onClose: () => void 
         onSubmit={(e) => { e.preventDefault(); save.mutate(); }}
         className="space-y-4"
       >
-        <div className="space-y-2">
+        <div className="space-y-2 tour-form-nome">
           <Label>Nome *</Label>
           <Input required value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
         </div>
@@ -233,7 +248,7 @@ function ObraDialog({ obra, onClose }: { obra: Obra | null; onClose: () => void 
             <Input maxLength={2} value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value.toUpperCase() })} />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 tour-form-latlng">
           <div className="space-y-2">
             <Label>Latitude</Label>
             <Input type="number" step="any" value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} />
@@ -260,9 +275,9 @@ function ObraDialog({ obra, onClose }: { obra: Obra | null; onClose: () => void 
             <Input type="date" value={form.data_prevista_termino} onChange={(e) => setForm({ ...form, data_prevista_termino: e.target.value })} />
           </div>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 tour-form-status">
           <Label>Status</Label>
-          <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as Obra["status"] })}>
+          <Select value={form.status} onValueChange={(v: any) => setForm({ ...form, status: v })}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="em_andamento">Em andamento</SelectItem>
@@ -290,7 +305,7 @@ function ObraDialog({ obra, onClose }: { obra: Obra | null; onClose: () => void 
 
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" disabled={save.isPending}>
+          <Button className="tour-form-save" type="submit" disabled={save.isPending}>
             {save.isPending && <Loader2 className="size-4 animate-spin" />}
             Salvar
           </Button>

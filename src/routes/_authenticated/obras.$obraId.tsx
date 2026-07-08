@@ -38,9 +38,10 @@ import {
   FileDown,
   MapPin,
   Building2,
-  AlertCircle,
   CheckCircle2,
   FileText,
+  Compass,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { OBRA_STATUS_LABEL } from "@/lib/labels";
@@ -177,8 +178,15 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
               <ChevronLeft className="size-4" /> Voltar
             </Link>
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setStage("obra")}>
-            Ajuda
+          <Button variant="outline" size="sm" onClick={() => {
+            setStage("idle");
+            setTimeout(() => {
+              toast.info("Iniciando tutorial...");
+              setStage("obra");
+            }, 100);
+          }}>
+            <Compass className="size-4 mr-2" />
+            Tutorial da Obra
           </Button>
         </div>
 
@@ -202,7 +210,11 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
                   ["Resolvidos", resumo.data?.resolvidos ?? 0, CheckCircle2],
                 ] as const
               ).map(([label, n, Icon]) => (
-                <Card key={label} className="text-center">
+                <Card 
+                  key={label} 
+                  className="text-center cursor-pointer hover:border-primary transition-colors"
+                  onClick={() => navigate({ search: { tab: "mapa" } as any, replace: true })}
+                >
                   <CardContent className="py-3 px-2">
                     <Icon className={`size-4 mx-auto mb-1 ${label === "Abertos" ? "text-destructive" : label === "Resolvidos" ? "text-success" : "text-muted-foreground"}`} />
                     <div className="text-2xl font-bold">{n}</div>
@@ -428,7 +440,11 @@ function MapaTab({ obraId }: { obraId: string }) {
         <CardContent className="py-12 text-center space-y-3">
           <MapPin className="size-10 mx-auto text-muted-foreground" />
           <p className="text-muted-foreground">Nenhuma torre cadastrada.</p>
-          <p className="text-sm text-muted-foreground">Configure a estrutura da obra no Menu.</p>
+          <p className="text-sm text-muted-foreground mb-4">Configure a estrutura da obra no Menu.</p>
+          <Button variant="outline" onClick={() => navigate({ search: { tab: "menu" } as any, replace: true })}>
+            <Settings className="size-4 mr-2" />
+            Estrutura da Obra
+          </Button>
         </CardContent>
       </Card>
     );
@@ -502,10 +518,16 @@ function MapaTab({ obraId }: { obraId: string }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold tracking-tight">Estrutura das Torres</h2>
-        <Button size="sm" variant="outline" onClick={handleExportPdf}>
-          <FileDown className="size-4 mr-2" />
-          Exportar Mapa (PDF)
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => navigate({ search: { tab: "menu" } as any, replace: true })}>
+            <Settings className="size-4 mr-2 hidden sm:inline" />
+            Estrutura
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleExportPdf}>
+            <FileDown className="size-4 mr-2 hidden sm:inline" />
+            PDF
+          </Button>
+        </div>
       </div>
       <div className="mt-4">
         <TorreMapaView obraId={obraId} torres={torresQ.data} apontamentoCounts={counts} />

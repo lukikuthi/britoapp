@@ -113,7 +113,7 @@ function Dashboard() {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Obras</h1>
           <p className="text-sm text-muted-foreground mt-1">Selecione uma obra para ver o mapa e apontamentos.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => startTutorial()}>
+        <Button variant="outline" size="sm" onClick={() => startTutorial((obrasQ.data?.length ?? 0) > 0)}>
           Iniciar Tutorial
         </Button>
       </div>
@@ -123,7 +123,7 @@ function Dashboard() {
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
         </div>
       ) : !obrasQ.data?.length ? (
-        <Card>
+        <Card className="tour-lista-obras">
           <CardContent className="py-12 text-center text-muted-foreground">
             {isAdmin
               ? "Nenhuma obra cadastrada. Use o botão + para adicionar."
