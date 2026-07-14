@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { assetUrl } from "@/lib/asset-url";
 
 interface AppLoadingScreenProps {
   /** Quando true, inicia o fade-out. */
@@ -34,7 +35,7 @@ export function AppLoadingScreen({ ready = false, onHidden }: AppLoadingScreenPr
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <img
-              src="/gif.gif"
+              src={assetUrl("/gif.gif")}
               alt="Carregando..."
               className="h-64 md:h-96 w-auto max-w-[90vw] object-contain"
             />

@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { assetUrl } from "@/lib/asset-url";
 
 interface BritoLogoProps {
   className?: string;
@@ -22,7 +23,7 @@ export function BritoLogo({ className, size = "md", showText = true }: BritoLogo
 
   return (
     <img
-      src="/brito-logo.png"
+      src={assetUrl("/brito-logo.png")}
       alt="Brito Engenharia e Instalações"
       className={cn("w-auto object-contain shrink-0", sizeClass[size], className)}
     />

@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { assetUrl } from "@/lib/asset-url";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -70,7 +71,7 @@ async function addLandscapeHeader(doc: jsPDF, subtitle: string) {
   // Try to load logo
   let logo: string | null = null;
   try {
-    logo = await fetchImageAsBase64("/brito-logo.png");
+    logo = await fetchImageAsBase64(assetUrl("/brito-logo.png"));
   } catch {
     /* ignore */
   }
