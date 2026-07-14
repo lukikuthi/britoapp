@@ -187,3 +187,23 @@ export function useImportItens() {
     },
   });
 }
+
+/**
+ * Limpa todos os itens e medições de uma obra.
+ */
+export function useClearMedicao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (obraId: string) => {
+      const { error } = await supabase
+        .from("obra_medicao_itens" as any)
+        .delete()
+        .eq("obra_id", obraId);
+      if (error) throw error;
+    },
+    onSuccess: (_, obraId) => {
+      qc.invalidateQueries({ queryKey: ["medicao-itens", obraId] });
+    },
+  });
+}
+

@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Ruler, Upload, Download, Plus, Trash2, ChevronDown, ChevronRight,
-  AlertTriangle, CheckCircle2, Package, BarChart3, FileSpreadsheet, Loader2, Info,
+  AlertTriangle, CheckCircle2, Package, BarChart3, FileSpreadsheet, Loader2, Info, Eraser,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -13,6 +13,7 @@ import {
   useCreateMedicao,
   useDeleteMedicao,
   useImportItens,
+  useClearMedicao,
   type MedicaoItemWithMedicoes,
 } from "@/hooks/use-medicao";
 
@@ -45,8 +46,10 @@ interface ObraMedicaoTabProps {
 
 export function ObraMedicaoTab({ obraId, isAdmin = false }: ObraMedicaoTabProps) {
   const { data: itens, isLoading } = useMedicaoItens(obraId);
+  const clearMedicao = useClearMedicao();
   const [selectedItem, setSelectedItem] = useState<MedicaoItemWithMedicoes | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   // Group items by grupo
@@ -131,6 +134,17 @@ export function ObraMedicaoTab({ obraId, isAdmin = false }: ObraMedicaoTabProps)
             <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="size-4 mr-1" />
               Exportar XLSX
+            </Button>
+          )}
+          {itens && itens.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+              onClick={() => setShowClearConfirm(true)}
+            >
+              <Eraser className="size-4 mr-1" />
+              Limpar Medição
             </Button>
           )}
         </div>
@@ -308,6 +322,43 @@ export function ObraMedicaoTab({ obraId, isAdmin = false }: ObraMedicaoTabProps)
         onClose={() => setShowImport(false)}
         obraId={obraId}
       />
+
+      {/* Clear confirmation dialog */}
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Eraser className="size-5 text-destructive" />
+              Limpar toda a medição?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação vai remover <strong>todos os itens</strong> e <strong>todas as medições lançadas</strong> desta obra.
+              Isso não pode ser desfeito. Tem certeza?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              disabled={clearMedicao.isPending}
+              onClick={() => {
+                clearMedicao.mutate(obraId, {
+                  onSuccess: () => {
+                    toast.success("Medição limpa com sucesso! Você pode importar uma nova planilha.");
+                    setShowClearConfirm(false);
+                  },
+                  onError: (err: any) => {
+                    toast.error(err.message || "Erro ao limpar medição.");
+                  },
+                });
+              }}
+            >
+              {clearMedicao.isPending && <Loader2 className="size-4 animate-spin mr-1" />}
+              Sim, limpar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
