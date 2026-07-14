@@ -14,6 +14,8 @@ interface DashboardFabProps {
 }
 
 export function DashboardFab({ isAdmin }: DashboardFabProps) {
+  if (!isAdmin) return null;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

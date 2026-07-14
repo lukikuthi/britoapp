@@ -4,139 +4,172 @@ import { Joyride, CallBackProps, STATUS, Step, ACTIONS, EVENTS } from "react-joy
 import { useTutorial } from "@/hooks/use-tutorial";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { HardHat, Compass, FileCheck2, MapPin } from "lucide-react";
+import { HardHat, Compass, FileCheck2, MapPin, PartyPopper } from "lucide-react";
+import { toast } from "sonner";
 
+/* ───────────────────────────────────────────────
+   STEPS: DASHBOARD (COM OBRAS)
+   ─────────────────────────────────────────────── */
 const DASHBOARD_STEPS: Step[] = [
   {
     target: "body",
-    content: "Bem-vindo ao Brito Builder Log! Sou seu assistente de tour e vou te mostrar os controles básicos do seu novo império da construção civil.",
+    content: "Bem-vindo ao Brito Builder Log! Sou seu assistente e vou te guiar por todas as funcionalidades da plataforma.",
     placement: "center",
     disableBeacon: true,
   },
   {
     target: ".tour-nova-obra",
-    content: "Criar Obra: Clique neste botão gigante no canto para registrar um novo canteiro de obras. Você precisará de dados básicos como Endereço, Latitude/Longitude (para o Clima Inteligente) e Data de Início.",
+    content: "Botão de Ações Rápidas: Clique aqui para registrar uma nova obra ou adicionar um novo usuário à plataforma.",
     placement: "top",
   },
   {
     target: ".tour-lista-obras",
-    content: "Painel de Comando: Todas as suas Obras ativas aparecerão nesta lista. Você pode ver instantaneamente quantas RNCs ou Apontamentos estão atrasados sem nem precisar entrar na obra.",
+    content: "Painel de Obras: Todas as suas obras ativas aparecem aqui. Você vê o status, a cidade, e quantos apontamentos estão abertos — tudo sem precisar entrar na obra. Ao finalizar, vou entrar automaticamente na primeira obra para continuar o tutorial.",
     placement: "top",
   },
 ];
 
+/* ───────────────────────────────────────────────
+   STEPS: DASHBOARD (SEM OBRAS)
+   ─────────────────────────────────────────────── */
 const DASHBOARD_EMPTY_STEPS: Step[] = [
   {
     target: "body",
-    content: "Como você ainda não tem nenhuma obra, vamos começar criando sua primeira!",
+    content: "Bem-vindo ao Brito Builder Log! Você ainda não tem nenhuma obra cadastrada. Vamos criar sua primeira agora!",
     placement: "center",
     disableBeacon: true,
   },
   {
     target: ".tour-nova-obra",
-    content: "Ao finalizar, eu vou clicar magicamente aqui para você abrir o formulário de Nova Obra.",
+    content: "Clique neste botão para abrir o formulário de criação. Ao avançar, eu vou navegar até a tela de obras para você!",
     placement: "top",
-  }
+  },
 ];
 
+/* ───────────────────────────────────────────────
+   STEPS: CRIANDO OBRA (Formulário)
+   ─────────────────────────────────────────────── */
 const CREATING_OBRA_STEPS: Step[] = [
   {
     target: "body",
-    content: "Esta é a tela de Gestão de Obras. Aqui você verá todas as suas obras cadastradas no futuro.",
+    content: "Esta é a tela de Gestão de Obras. Aqui você cadastra e gerencia todos os seus canteiros. Vamos criar uma obra agora!",
     placement: "center",
     disableBeacon: true,
   },
   {
     target: ".tour-form-nova",
-    content: "Ao clicar em Próximo, eu vou abrir o formulário automaticamente para você!",
+    content: "Clique em 'Nova Obra' para abrir o formulário. Ao avançar, eu abro automaticamente para você!",
     placement: "bottom",
   },
   {
     target: ".tour-form-nome",
-    content: "Nome da Obra: Como ela será chamada? Pode ser o nome do edifício, cliente ou loteamento.",
+    content: "📝 Nome da Obra: Dê um nome descritivo — pode ser o nome do edifício, do condomínio ou do cliente. Este é o único campo obrigatório.",
     placement: "right",
   },
   {
     target: ".tour-form-latlng",
-    content: "Latitude e Longitude: Extremamente importantes! O sistema usará isso para puxar o Clima automático via satélite todos os dias.",
+    content: "📍 Latitude e Longitude: MUITO IMPORTANTE! O sistema usa essas coordenadas para buscar automaticamente as condições climáticas via satélite quando você cria um RDO. Sem elas, o clima não é preenchido automaticamente.",
     placement: "right",
   },
   {
     target: ".tour-form-status",
-    content: "Status: Mantenha 'Em andamento' para poder preencher RDOs e Apontamentos.",
+    content: "🔄 Status: Mantenha 'Em andamento' para poder criar RDOs e apontamentos. Obras 'Pausadas' ou 'Concluídas' ficam bloqueadas para edição.",
     placement: "right",
   },
   {
     target: ".tour-form-save",
-    content: "Tudo pronto! Preencha o nome (obrigatório) e clique em Salvar para entrarmos na sua nova obra.",
+    content: "✅ Preencha pelo menos o nome e clique em Salvar. O sistema vai te redirecionar automaticamente para dentro da nova obra!",
     placement: "top",
   },
 ];
 
+/* ───────────────────────────────────────────────
+   STEPS: ESPERANDO O USUÁRIO ENTRAR NA OBRA
+   ─────────────────────────────────────────────── */
 const WAITING_OBRA_STEP: Step[] = [
   {
     target: ".tour-lista-obras",
-    content: "Para continuarmos nosso tour, clique em qualquer uma das suas obras na lista para entrarmos no canteiro!",
+    content: "Agora clique em qualquer obra da lista para entrarmos no canteiro e continuarmos o tutorial!",
     placement: "top",
     disableBeacon: true,
-  }
+  },
 ];
 
+/* ───────────────────────────────────────────────
+   STEPS: DENTRO DA OBRA (Tour Completo)
+   ─────────────────────────────────────────────── */
 const OBRA_STEPS: Step[] = [
+  // --- Boas-vindas ---
   {
     target: "body",
-    content: "Bem-vindo ao Painel da Obra! Vou te mostrar como operar como um verdadeiro Fiscal de Campo.",
+    content: "🏗️ Bem-vindo ao Painel da Obra! Aqui é onde toda a mágica acontece. Vou te mostrar CADA seção em detalhes. O sistema vai trocar de aba automaticamente para você!",
     placement: "center",
     disableBeacon: true,
   },
+  // --- VISÃO ---
   {
     target: ".tour-tab-visao",
-    content: "Visão Geral: Aqui você acompanha rapidamente os números críticos da obra (Andares, Ocorrências Abertas e Resolvidas).",
+    content: "📊 VISÃO GERAL: Resume toda a obra em números. Você vê a quantidade de Torres, Andares, Apontamentos Abertos e Resolvidos. Clique nos cards para navegar diretamente para a seção correspondente.",
     placement: "top",
   },
+  // --- RDO ---
   {
     target: ".tour-tab-rdo",
-    content: "RDO (Relatório Diário de Obra): O coração do canteiro. Registre o clima (automático via satélite!), efetivo de mão de obra e andamento.",
+    content: "📋 RDO (Relatório Diário de Obra): O documento mais importante do canteiro! Registre clima, efetivo, atividades e fotos. E a novidade: quando os 5 dias da semana (Segunda a Sexta) estiverem preenchidos, o sistema libera automaticamente a criação de um RDO SEMANAL consolidado!",
     placement: "top",
   },
+  // --- MEDIÇÃO ---
+  {
+    target: ".tour-tab-medicao",
+    content: "📐 MEDIÇÃO DE CAMPO: Importe a planilha de orçamento do escritório e vá para o campo dar baixa nas quantidades executadas. O sistema calcula automaticamente o Saldo restante e o % de Progresso. Você pode configurar a obra como 'Escopo Parcial' ou 'Global' nas Configurações.",
+    placement: "top",
+  },
+  // --- PLANTAS ---
   {
     target: ".tour-tab-mapa",
-    content: "Plantas e Apontamentos Visuais: Suba as plantas arquitetônicas e adicione 'Pins' de tarefas ou defeitos direto no desenho.",
+    content: "🗺️ PLANTAS E APONTAMENTOS: Faça upload das plantas (agora com remoção e substituição facilitadas) e adicione PINS interativos direto no desenho para marcar pendências. Exporte tudo em PDF.",
     placement: "top",
   },
+  // --- FOTOS ---
   {
     target: ".tour-tab-fotografia",
-    content: "Diário Fotográfico: Onde você centraliza todas as fotos do canteiro. Facilita a geração de relatórios fotográficos em PDF com 1 clique.",
+    content: "📸 DIÁRIO FOTOGRÁFICO: Centralize todas as fotos do canteiro com título e descrição. Ideal para montar relatórios fotográficos em PDF — útil para medições, vistorias de entrega e acompanhamento de clientes.",
     placement: "top",
   },
+  // --- MATERIAIS ---
   {
     target: ".tour-tab-materiais",
-    content: "Materiais: Cadastre e monitore as entregas e estoques no canteiro.",
+    content: "📦 MATERIAIS: Gerencie o controle de recebimento de materiais no canteiro. Cadastre itens esperados, registre entregas, e acompanhe o que já chegou vs. o que falta. Integra com o módulo FVR (Ficha de Verificação) no Menu.",
     placement: "top",
   },
+  // --- LAUDOS ---
   {
     target: ".tour-tab-laudos",
-    content: "Laudos e ARTs: Guarde toda a documentação técnica da obra de forma segura e organizada.",
+    content: "📄 LAUDOS E ARTs: Guarde toda a documentação técnica da obra em um só lugar — laudos estruturais, ARTs de responsabilidade técnica, relatórios de sondagem, etc. Faça upload de qualquer arquivo.",
     placement: "top",
   },
+  // --- SESMT ---
   {
     target: ".tour-tab-sesmt",
-    content: "SESMT: Controle de Segurança do Trabalho, EPIs e treinamentos para manter a obra 100% regular.",
+    content: "⛑️ SESMT (Segurança do Trabalho): Controle de DDS (Diálogos Diários de Segurança) e entrega de EPIs com ficha assinada. Mantenha sua obra 100% regularizada com o Ministério do Trabalho.",
     placement: "top",
   },
+  // --- CRONOGRAMA ---
   {
     target: ".tour-tab-cronograma",
-    content: "Gantt e EAP: Defina a Estrutura Analítica do Projeto e acompanhe visualmente o progresso das barras no tempo.",
+    content: "📅 CRONOGRAMA GANTT: Monte a EAP (Estrutura Analítica do Projeto) com os pacotes de trabalho e visualize o progresso em barras de Gantt. Essencial para controle de prazos e medições de empreiteiros.",
     placement: "top",
   },
+  // --- CONFIG ---
   {
     target: ".tour-obra-config",
-    content: "Configurações: Ajuste os dados básicos da obra e convide usuários (Fiscais, Engenheiros e Clientes) para sua equipe.",
+    content: "⚙️ CONFIGURAÇÕES: Edite os dados da obra (nome, endereço, coordenadas), gerencie a Equipe (convide Engenheiros, Fiscais e Clientes) e configure a Estrutura (Torres, Andares e Grupos).",
     placement: "bottom",
   },
+  // --- MENU ---
   {
     target: ".tour-tab-menu",
-    content: "Menu Completo: O botão mais importante! Clicando nele, você encontra os Módulos Sênior: FVR (Ficha de Verificação), Concretagem, RNC (Não Conformidades) e Medição (BM).",
+    content: "📂 MENU COMPLETO: Aqui ficam os Módulos Avançados que não cabem na barra inferior: Concretagem (controle de caminhões-betoneira), FVR (Ficha de Verificação de Recebimento), RNC (Relatório de Não Conformidade) e BM (Boletim de Medição Física). Explore cada um!",
     placement: "top",
   },
 ];
@@ -145,7 +178,7 @@ export function GlobalTutorial() {
   const { stage, setStage, hasObras } = useTutorial();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
-  
+
   const [steps, setSteps] = useState<Step[]>([]);
   const [run, setRun] = useState(false);
 
@@ -167,29 +200,27 @@ export function GlobalTutorial() {
 
     if (stage === "dashboard") {
       setSteps(hasObras ? DASHBOARD_STEPS : DASHBOARD_EMPTY_STEPS);
-      // Small delay to ensure render
       setTimeout(() => setRun(true), 100);
     } else if (stage === "creating_obra") {
       setSteps(CREATING_OBRA_STEPS);
-      setTimeout(() => setRun(true), 500); // 500ms for dialog to open
+      setTimeout(() => setRun(true), 500);
     } else if (stage === "waiting_obra") {
       setSteps(WAITING_OBRA_STEP);
       setTimeout(() => setRun(true), 100);
     } else if (stage === "obra") {
-      // Small delay to allow Obra data to load before attaching tour to elements
       const timer = setTimeout(() => {
         setSteps(OBRA_STEPS);
         setRun(true);
       }, 1200);
       return () => clearTimeout(timer);
     }
-  }, [stage]);
+  }, [stage, hasObras]);
 
   const handleJoyrideCallback = (data: CallBackProps) => {
     const { status, type, step } = data;
     const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
 
-    // Automatically change tabs on Obra steps or auto-click elements
+    // Auto-click the "Nova Obra" button during creating_obra stage
     if (type === EVENTS.STEP_AFTER && stage === "creating_obra") {
       if (step.target === ".tour-form-nova") {
         const btn = document.querySelector(".tour-form-nova") as HTMLElement;
@@ -197,12 +228,14 @@ export function GlobalTutorial() {
       }
     }
 
+    // Automatically change tabs on Obra steps
     if (type === EVENTS.STEP_BEFORE && stage === "obra") {
       const match = pathname.match(/\/obras\/([^/]+)/);
       const obraId = match ? match[1] : null;
       if (obraId && typeof step.target === "string") {
-        let nextTab = null;
+        let nextTab: string | null = null;
         if (step.target === ".tour-tab-visao") nextTab = "visao";
+        else if (step.target === ".tour-tab-medicao") nextTab = "medicao";
         else if (step.target === ".tour-tab-rdo") nextTab = "rdo";
         else if (step.target === ".tour-tab-mapa") nextTab = "mapa";
         else if (step.target === ".tour-tab-fotografia") nextTab = "fotografia";
@@ -211,6 +244,7 @@ export function GlobalTutorial() {
         else if (step.target === ".tour-tab-sesmt") nextTab = "sesmt";
         else if (step.target === ".tour-tab-cronograma") nextTab = "cronograma";
         else if (step.target === ".tour-tab-menu") nextTab = "menu";
+        else if (step.target === ".tour-obra-config") nextTab = "menu";
 
         if (nextTab) {
           navigate({
@@ -227,37 +261,39 @@ export function GlobalTutorial() {
     if (finishedStatuses.includes(status)) {
       if (stage === "dashboard") {
         if (hasObras) {
-          // Auto-navigate to the first obra!
+          // Auto-navigate to the first obra
           const firstObra = document.querySelector(".tour-lista-obras a") as HTMLAnchorElement;
           const href = firstObra?.getAttribute("href");
           if (href) {
             navigate({ to: href } as any);
             setStage("obra");
           } else {
-            setStage("waiting_obra"); // Fallback
+            setStage("waiting_obra");
           }
         } else {
-          // Auto-click the Nova Obra button if it's there
           const novaBtn = document.querySelector(".tour-nova-obra") as HTMLElement;
           if (novaBtn) novaBtn.click();
           navigate({ to: "/obras" });
           setStage("creating_obra");
         }
       } else if (stage === "creating_obra") {
-        setStage("waiting_obra"); // Wait for user to hit save and trigger pathname change
+        setStage("waiting_obra");
       } else if (stage === "waiting_obra") {
-        setStage("idle"); // If user skipped while waiting, just stop
+        setStage("idle");
       } else if (stage === "obra") {
         setStage("finished");
-        // Could show a toast here "Tutorial finalizado!"
+        toast.success("🎉 Tutorial finalizado! Agora você conhece todas as funcionalidades. Explore à vontade!", {
+          duration: 6000,
+        });
       }
     }
   };
 
   return (
     <>
+      {/* Welcome Dialog */}
       <Dialog open={stage === "welcome"} onOpenChange={(open) => !open && setStage("idle")}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
               <Compass className="size-6 text-primary" />
@@ -267,7 +303,7 @@ export function GlobalTutorial() {
               Este sistema foi feito por engenheiros para engenheiros. Aqui você vai gerenciar suas obras de ponta a ponta sem complicação.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="flex gap-3 items-start">
               <div className="bg-primary/10 p-2 rounded-full mt-1">
@@ -275,17 +311,17 @@ export function GlobalTutorial() {
               </div>
               <div>
                 <h4 className="font-semibold text-foreground">Gestão de Canteiro</h4>
-                <p className="text-sm text-muted-foreground">Obras, usuários, relatórios fotográficos e efetivo.</p>
+                <p className="text-sm text-muted-foreground">Obras, RDOs diários com clima automático, equipe e controle fotográfico.</p>
               </div>
             </div>
-            
+
             <div className="flex gap-3 items-start">
               <div className="bg-primary/10 p-2 rounded-full mt-1">
                 <MapPin className="size-5 text-primary" />
               </div>
               <div>
                 <h4 className="font-semibold text-foreground">Apontamentos Visuais</h4>
-                <p className="text-sm text-muted-foreground">Faça o upload de plantas baixas e insira PINS para apontar ocorrências, tarefas e não conformidades diretamente no projeto.</p>
+                <p className="text-sm text-muted-foreground">Faça upload de plantas e insira PINS para marcar defeitos, tarefas e não conformidades direto no projeto.</p>
               </div>
             </div>
 
@@ -294,19 +330,46 @@ export function GlobalTutorial() {
                 <FileCheck2 className="size-5 text-primary" />
               </div>
               <div>
-                <h4 className="font-semibold text-foreground">Módulos Sênior</h4>
-                <p className="text-sm text-muted-foreground">Relatório Diário de Obras (RDO) com clima automatizado via satélite, Fichas de Verificação (FVR), Boletim de Medição (BM) e Cronogramas.</p>
+                <h4 className="font-semibold text-foreground">Módulos Avançados</h4>
+                <p className="text-sm text-muted-foreground">Concretagem, FVR, RNC, Boletim de Medição, SESMT, Cronograma Gantt e muito mais.</p>
               </div>
             </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setStage("idle")}>Pular Tutorial</Button>
-            <Button onClick={() => setStage("dashboard")}>Iniciar Tour Guiado</Button>
+            <Button onClick={() => setStage("dashboard")}>
+              <Compass className="size-4 mr-2" />
+              Iniciar Tour Guiado
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Finished Dialog */}
+      <Dialog open={stage === "finished"} onOpenChange={(open) => !open && setStage("idle")}>
+        <DialogContent className="sm:max-w-[450px] text-center">
+          <div className="flex flex-col items-center gap-4 py-6">
+            <div className="bg-primary/10 p-4 rounded-full">
+              <PartyPopper className="size-10 text-primary" />
+            </div>
+            <DialogTitle className="text-2xl font-bold">Tutorial Finalizado! 🎉</DialogTitle>
+            <DialogDescription className="text-base">
+              Agora você conhece todas as funcionalidades do Brito Builder Log. Explore cada módulo à vontade e construa obras extraordinárias!
+            </DialogDescription>
+            <p className="text-sm text-muted-foreground">
+              Dica: use o botão "Tutorial da Obra" dentro de qualquer obra para rever as explicações a qualquer momento.
+            </p>
+          </div>
+          <DialogFooter className="sm:justify-center">
+            <Button onClick={() => setStage("idle")}>
+              Começar a Usar! 🚀
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Joyride */}
       <Joyride
         key={stage}
         callback={handleJoyrideCallback}
@@ -320,15 +383,23 @@ export function GlobalTutorial() {
         styles={{
           options: {
             zIndex: 10000,
-            primaryColor: '#0f172a',
-            textColor: '#0f172a',
+            primaryColor: "#0f172a",
+            textColor: "#0f172a",
+          },
+          tooltip: {
+            borderRadius: 12,
+            padding: 20,
+          },
+          tooltipContent: {
+            fontSize: 14,
+            lineHeight: 1.6,
           },
         }}
         locale={{
           back: "Voltar",
           close: "Fechar",
-          last: stage === "dashboard" ? "Entrar na Obra" : "Finalizar Tour",
-          next: "Próximo",
+          last: stage === "dashboard" ? "Entrar na Obra →" : "Finalizar Tour 🎉",
+          next: "Próximo →",
           skip: "Pular tour",
         }}
       />

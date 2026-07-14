@@ -53,10 +53,25 @@ function AuthPage() {
     navigate({ to: "/dashboard", replace: true });
   }
 
+  async function handleResetPassword() {
+    if (!email) {
+      toast.error("Digite seu e-mail primeiro para redefinir a senha.");
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    setLoading(false);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("E-mail de redefinição enviado! Verifique sua caixa de entrada e spam.");
+    }
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-secondary">
-      <header className="p-6">
-        <BritoLogo size="md" />
+      <header className="p-6 pb-2">
+        <BritoLogo size="xl" />
       </header>
       <main className="flex-1 flex items-center justify-center px-4 pb-12">
         <Card className="w-full max-w-md">
@@ -80,7 +95,17 @@ function AuthPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="senha">Senha</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="senha">Senha</Label>
+                  <button
+                    type="button"
+                    onClick={handleResetPassword}
+                    className="text-xs text-primary hover:underline font-medium"
+                    disabled={loading}
+                  >
+                    Esqueceu a senha?
+                  </button>
+                </div>
                 <Input
                   id="senha"
                   type="password"
@@ -102,7 +127,7 @@ function AuthPage() {
         </Card>
       </main>
       <footer className="text-center text-xs text-sidebar-foreground/60 pb-6" suppressHydrationWarning>
-        © {new Date().getFullYear()} BRITO ENGENHARIA · Diário de Obra
+        © {new Date().getFullYear()} BRITO ENGENHARIA · PROJETO MATRIZ · Desenvolvido por Lucas Kikuthi
       </footer>
     </div>
   );

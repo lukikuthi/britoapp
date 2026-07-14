@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 interface BritoLogoProps {
   className?: string;
   /** Tamanho compacto para header/sidebar. */
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg" | "xl";
   showText?: boolean;
   /** Mantido por compatibilidade — a logo é sempre a imagem da marca. */
   variant?: "light" | "dark";
@@ -12,6 +12,8 @@ interface BritoLogoProps {
 const sizeClass = {
   sm: "h-10",
   md: "h-12",
+  lg: "h-16",
+  xl: "h-24",
 } as const;
 
 /** Logo da marca (PNG transparente) para header e sidebar. */

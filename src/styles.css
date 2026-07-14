@@ -173,4 +173,36 @@
   .brito-status-dot[data-status="em_andamento"] { background: var(--success); }
   .brito-status-dot[data-status="pausada"] { background: var(--warning); }
   .brito-status-dot[data-status="concluida"] { background: var(--muted-foreground); }
+
+  /* Tutorial Glow - "Aura amarelinha dando voltas" */
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .tutorial-glow-wrapper {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    border-color: transparent !important;
+  }
+  .tutorial-glow-wrapper::before {
+    content: "";
+    position: absolute;
+    top: -100%;
+    left: -100%;
+    width: 300%;
+    height: 300%;
+    background: conic-gradient(from 0deg, transparent, rgba(250, 204, 21, 0.1), rgba(250, 204, 21, 1), transparent 25%);
+    animation: spin-slow 2.5s linear infinite;
+    z-index: -2;
+  }
+  .tutorial-glow-wrapper::after {
+    content: "";
+    position: absolute;
+    inset: 1.5px;
+    border-radius: calc(var(--radius) - 2px);
+    background-color: var(--color-background);
+    z-index: -1;
+  }
 }

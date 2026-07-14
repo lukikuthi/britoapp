@@ -1,8 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
-import { LayoutGrid, MapPin, Menu, Camera, FileText, Activity, Package, FileCheck, HardHat, BarChart3 } from "lucide-react";
+import { LayoutGrid, MapPin, Menu, Camera, FileText, Activity, Package, FileCheck, HardHat, BarChart3, Ruler } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type ObraTab = "visao" | "analytics" | "mapa" | "rdo" | "fotografia" | "menu" | "materiais" | "laudos" | "sesmt" | "cronograma" | "concretagem" | "fvr" | "rnc" | "bm";
+export type ObraTab = "visao" | "analytics" | "mapa" | "rdo" | "fotografia" | "menu" | "materiais" | "laudos" | "sesmt" | "cronograma" | "concretagem" | "fvr" | "rnc" | "bm" | "medicao";
 
 interface ObraBottomNavProps {
   obraId: string;
@@ -18,6 +18,7 @@ const tabs: { id: ObraTab; label: string; icon: any; search: { tab: ObraTab } }[
   { id: "laudos", label: "Laudos", icon: FileCheck, search: { tab: "laudos" } },
   { id: "sesmt", label: "SESMT", icon: HardHat, search: { tab: "sesmt" } },
   { id: "cronograma", label: "Gantt", icon: LayoutGrid, search: { tab: "cronograma" } },
+  { id: "medicao", label: "Medição", icon: Ruler, search: { tab: "medicao" } },
   { id: "menu", label: "Menu", icon: Menu, search: { tab: "menu" } },
 ];
 
@@ -25,35 +26,44 @@ export function ObraBottomNav({ obraId, active }: ObraBottomNavProps) {
   const navigate = useNavigate();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-card md:left-64">
-      <div className="max-w-6xl mx-auto flex">
-        {tabs.map((t) => {
-          const Icon = t.icon;
-          const isActive = active === t.id;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() =>
-                navigate({
-                  to: "/obras/$obraId",
-                  params: { obraId },
-                  search: t.search,
-                  resetScroll: false,
-                  replace: true,
-                })
-              }
-              className={cn(
-                `tour-tab-${t.id}`,
-                "flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[0.65rem] sm:text-xs font-medium transition-colors",
-                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <Icon className={cn("size-5", isActive && "text-primary")} />
-              {t.label}
-            </button>
-          );
-        })}
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/50 bg-background/80 backdrop-blur-lg md:left-64 shadow-[0_-4px_24px_rgb(0,0,0,0.02)]">
+      <div className="relative">
+        {/* Scroll fade indicators */}
+        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-background/80 to-transparent z-10 sm:hidden" />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-background/80 to-transparent z-10 sm:hidden" />
+
+        <div className="max-w-6xl mx-auto flex overflow-x-auto scrollbar-hide">
+          {tabs.map((t) => {
+            const Icon = t.icon;
+            const isActive = active === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() =>
+                  navigate({
+                    to: "/obras/$obraId",
+                    params: { obraId },
+                    search: t.search,
+                    resetScroll: false,
+                    replace: true,
+                  })
+                }
+                className={cn(
+                  `tour-tab-${t.id}`,
+                  "relative min-w-fit flex-1 flex flex-col items-center gap-1 py-3 px-3 text-[0.65rem] sm:text-xs font-medium whitespace-nowrap transition-all duration-300",
+                  isActive ? "text-primary scale-105" : "text-muted-foreground hover:text-foreground hover:bg-muted/30",
+                )}
+              >
+                {isActive && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 rounded-b-full bg-[var(--brand-gold)] shadow-[0_0_8px_var(--brand-gold)]" />
+                )}
+                <Icon className={cn("size-5 transition-transform", isActive && "text-primary")} />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );
