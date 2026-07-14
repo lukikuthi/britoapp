@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type TourStage = "idle" | "welcome" | "dashboard" | "creating_obra" | "obra" | "finished";
+export type TourStage = "idle" | "welcome" | "dashboard" | "creating_obra" | "waiting_obra" | "obra" | "finished";
 
 interface TutorialState {
   stage: TourStage;

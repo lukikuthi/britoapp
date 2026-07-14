@@ -149,6 +149,7 @@ function ObraDialog({ obra, onClose }: { obra: Obra | null; onClose: () => void 
     data_inicio: obra?.data_inicio ?? "",
     data_prevista_termino: obra?.data_prevista_termino ?? "",
     status: obra?.status ?? "em_andamento",
+    tipo_escopo: obra?.tipo_escopo ?? "global",
     descricao: obra?.descricao ?? "",
     cliente_id: obra?.cliente_id ?? "",
   });
@@ -187,6 +188,7 @@ function ObraDialog({ obra, onClose }: { obra: Obra | null; onClose: () => void 
         data_inicio: form.data_inicio || null,
         data_prevista_termino: form.data_prevista_termino || null,
         status: form.status as Obra["status"],
+        tipo_escopo: form.tipo_escopo,
         descricao: form.descricao || null,
         cliente_id: form.cliente_id || null,
       };
@@ -283,6 +285,16 @@ function ObraDialog({ obra, onClose }: { obra: Obra | null; onClose: () => void 
               <SelectItem value="em_andamento">Em andamento</SelectItem>
               <SelectItem value="pausada">Pausada</SelectItem>
               <SelectItem value="concluida">Concluída</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Escopo da Obra</Label>
+          <Select value={form.tipo_escopo} onValueChange={(v: any) => setForm({ ...form, tipo_escopo: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="global">Global (Completa)</SelectItem>
+              <SelectItem value="parcial">Parcial</SelectItem>
             </SelectContent>
           </Select>
         </div>

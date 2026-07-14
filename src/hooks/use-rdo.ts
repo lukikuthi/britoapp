@@ -8,6 +8,7 @@ export interface Rdo {
   data: string;
   numero_sequencial: number;
   status: "rascunho" | "enviado" | "aprovado";
+  tipo: "diario" | "semanal";
   hora_inicio: string | null;
   hora_fim: string | null;
   total_horas: number | null;
@@ -50,13 +51,14 @@ export function useRdosDaObra(obraId: string) {
 export function useCreateRdo() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ obra_id, data }: { obra_id: string; data: string }) => {
+    mutationFn: async ({ obra_id, data, tipo = "diario" }: { obra_id: string; data: string; tipo?: "diario" | "semanal" }) => {
       const { data: user } = await supabase.auth.getUser();
       const { data: rdo, error } = await supabase
         .from("rdos" as any)
         .insert({
           obra_id,
           data,
+          tipo,
           autor_id: user.user?.id,
           status: "rascunho",
         })

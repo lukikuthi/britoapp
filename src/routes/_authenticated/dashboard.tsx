@@ -113,7 +113,7 @@ function Dashboard() {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Obras</h1>
           <p className="text-sm text-muted-foreground mt-1">Selecione uma obra para ver o mapa e apontamentos.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => startTutorial((obrasQ.data?.length ?? 0) > 0)}>
+        <Button variant="outline" size="sm" className="tutorial-glow-wrapper" onClick={() => startTutorial((obrasQ.data?.length ?? 0) > 0)}>
           Iniciar Tutorial
         </Button>
       </div>
@@ -131,20 +131,26 @@ function Dashboard() {
           </CardContent>
         </Card>
       ) : (
-        <ul className="divide-y rounded-lg border bg-card tour-lista-obras">
-          {obrasQ.data.map((o) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 tour-lista-obras">
+          {obrasQ.data.map((o, idx) => {
             const abertos = apontQ.data?.get(o.id) ?? 0;
             return (
-              <li key={o.id}>
-                <Link
-                  to="/obras/$obraId"
-                  params={{ obraId: o.id }}
-                  search={{ tab: "visao" }}
-                  className="flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold truncate">{o.nome}</div>
-                    <div className="flex flex-wrap items-center gap-2 mt-1">
+              <Link
+                key={o.id}
+                to="/obras/$obraId"
+                params={{ obraId: o.id }}
+                search={{ tab: "visao" }}
+                className="block animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both"
+                style={{ animationDelay: `${idx * 100}ms` }}
+              >
+                <Card className="h-full hover:-translate-y-1 hover:shadow-lg hover:border-[var(--brand-gold)] transition-all duration-300">
+                  <CardContent className="p-5 flex flex-col justify-between h-full gap-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="font-semibold text-lg line-clamp-2">{o.nome}</div>
+                      <ChevronRight className="size-5 text-muted-foreground shrink-0 mt-1" />
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-2 mt-auto">
                       <Badge
                         variant="outline"
                         className={
@@ -156,23 +162,22 @@ function Dashboard() {
                         {OBRA_STATUS_LABEL[o.status]}
                       </Badge>
                       {abertos > 0 && (
-                        <span className="text-xs text-destructive font-medium">
-                          {abertos} apontamento{abertos !== 1 ? "s" : ""} aberto{abertos !== 1 ? "s" : ""}
+                        <span className="text-xs text-destructive font-medium bg-destructive/10 px-2 py-0.5 rounded-full">
+                          {abertos} apontamento{abertos !== 1 ? "s" : ""}
                         </span>
                       )}
                       {(rdosQ.data?.get(o.id) ?? 0) > 0 && (
-                        <span className="text-xs text-amber-500 font-medium">
-                          {rdosQ.data!.get(o.id)} RDO{rdosQ.data!.get(o.id)! !== 1 ? "s" : ""} pendente{rdosQ.data!.get(o.id)! !== 1 ? "s" : ""}
+                        <span className="text-xs text-amber-600 dark:text-amber-500 font-medium bg-amber-500/10 px-2 py-0.5 rounded-full">
+                          {rdosQ.data!.get(o.id)} RDO{rdosQ.data!.get(o.id)! !== 1 ? "s" : ""}
                         </span>
                       )}
                     </div>
-                  </div>
-                  <ChevronRight className="size-5 text-muted-foreground shrink-0" />
-                </Link>
-              </li>
+                  </CardContent>
+                </Card>
+              </Link>
             );
           })}
-        </ul>
+        </div>
       )}
 
       <DashboardFab isAdmin={isAdmin} />

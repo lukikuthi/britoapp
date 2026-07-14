@@ -11,6 +11,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ObraBottomNav, type ObraTab } from "@/components/obra-bottom-nav";
 import { ObraAnalyticsTab } from "@/components/obra-analytics-tab";
@@ -26,6 +36,7 @@ import { ObraConcretagemTab } from "@/components/obra-concretagem-tab";
 import { ObraFvrTab } from "@/components/obra-fvr-tab";
 import { ObraRncTab } from "@/components/obra-rnc-tab";
 import { ObraBmTab } from "@/components/obra-bm-tab";
+import { ObraMedicaoTab } from "@/components/obra-medicao-tab";
 import { useTutorial } from "@/hooks/use-tutorial";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -34,6 +45,7 @@ import {
   Plus,
   ChevronLeft,
   Trash2,
+  Upload,
   Settings,
   FileDown,
   MapPin,
@@ -49,7 +61,7 @@ import { OBRA_STATUS_LABEL } from "@/lib/labels";
 export const Route = createFileRoute("/_authenticated/obras/$obraId")({
   head: () => ({ meta: [{ title: "Obra — BRITO ENGENHARIA" }] }),
   validateSearch: (s: Record<string, unknown>): { tab: ObraTab } => ({
-    tab: (["visao", "analytics", "mapa", "rdo", "fotografia", "menu", "materiais", "laudos", "sesmt", "cronograma", "concretagem", "fvr", "rnc", "bm"].includes(String(s.tab)) ? s.tab : "visao") as ObraTab,
+    tab: (["visao", "analytics", "mapa", "rdo", "fotografia", "menu", "materiais", "laudos", "sesmt", "cronograma", "concretagem", "fvr", "rnc", "bm", "medicao"].includes(String(s.tab)) ? s.tab : "visao") as ObraTab,
   }),
   component: ObraDetail,
 });
@@ -178,14 +190,19 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
               <ChevronLeft className="size-4" /> Voltar
             </Link>
           </Button>
-          <Button variant="outline" size="sm" onClick={() => {
-            setStage("idle");
-            setTimeout(() => {
-              toast.info("Iniciando tutorial...");
-              setStage("obra");
-            }, 100);
-          }}>
-            <Compass className="size-4 mr-2" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="hidden sm:flex h-8 px-2 text-muted-foreground hover:text-foreground tutorial-glow-wrapper"
+            onClick={() => {
+              setStage("idle");
+              setTimeout(() => {
+                toast.info("Iniciando tutorial...");
+                setStage("obra");
+              }, 100);
+            }}
+          >
+            <Compass className="size-4 mr-1.5" />
             Tutorial da Obra
           </Button>
         </div>
@@ -295,9 +312,7 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
           <ObraProjetosTab obraId={obraId} />
         )}
 
-        {tab === "sesmt" && (
-          <ObraSesmtTab obraId={obraId} />
-        )}
+
         {tab === "cronograma" && (
           <ObraCronogramaTab obraId={obraId} />
         )}
@@ -312,6 +327,9 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
         )}
         {tab === "bm" && (
           <ObraBmTab obraId={obraId} />
+        )}
+        {tab === "medicao" && (
+          <ObraMedicaoTab obraId={obraId} isAdmin={isAdmin} />
         )}
 
         {tab === "materiais" && (
@@ -557,6 +575,7 @@ function ObraMenuTab({
   const [docsOpen, setDocsOpen] = useState(false);
   const [eapOpen, setEapOpen] = useState(false);
   const [projetosOpen, setProjetosOpen] = useState(false);
+  const [confirmDeleteObra, setConfirmDeleteObra] = useState(false);
 
   const delObra = useMutation({
     mutationFn: async () => {
@@ -608,16 +627,32 @@ function ObraMenuTab({
         <Button
           variant="destructive"
           className="w-full"
-          onClick={() => {
-            if (confirm(`Excluir a obra "${String(obra.nome)}"? Todos os dados serão removidos.`)) {
-              delObra.mutate();
-            }
-          }}
+          onClick={() => setConfirmDeleteObra(true)}
         >
-          <Trash2 className="size-4" />
+          <Trash2 className="size-4 mr-2" />
           Excluir obra
         </Button>
       )}
+
+      <AlertDialog open={confirmDeleteObra} onOpenChange={setConfirmDeleteObra}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir a obra "{String(obra.nome)}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Todos os dados, relatórios e plantas associadas a esta obra serão permanentemente removidos. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              onClick={() => delObra.mutate()}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {editOpen && (
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
@@ -685,6 +720,7 @@ function ObraEditDialog({ obraId, onClose }: { obraId: string; onClose: () => vo
           responsavel_tecnico: f.responsavel_tecnico || null,
           descricao: f.descricao || null,
           status: f.status,
+          tipo_escopo: f.tipo_escopo || "global",
         })
         .eq("id", obraId);
       if (error) throw error;
@@ -733,6 +769,16 @@ function ObraEditDialog({ obraId, onClose }: { obraId: string; onClose: () => vo
         <div className="space-y-1.5">
           <Label>Responsável técnico</Label>
           <Input value={v("responsavel_tecnico")} onChange={(e) => setForm({ ...form, responsavel_tecnico: e.target.value })} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Escopo da Obra</Label>
+          <Select value={v("tipo_escopo") || "global"} onValueChange={(val: any) => setForm({ ...form, tipo_escopo: val })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="global">Global (Completa)</SelectItem>
+              <SelectItem value="parcial">Parcial</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1.5">
           <Label>Descrição</Label>
@@ -814,6 +860,9 @@ function EstruturaObraDialog({ obraId, onClose }: { obraId: string; onClose: () 
     andarFinal: string;
     tipoAndar: string;
   } | null>(null);
+  
+  const [confirmTorreDelete, setConfirmTorreDelete] = useState<{ id: string; nome: string } | null>(null);
+  const [confirmPlantaDelete, setConfirmPlantaDelete] = useState<string | null>(null);
 
   const torres = useQuery({
     queryKey: ["obra-torres-estrutura", obraId],
@@ -912,6 +961,22 @@ function EstruturaObraDialog({ obraId, onClose }: { obraId: string; onClose: () 
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const handleRemovePlanta = async (grupoId: string) => {
+    try {
+      const { error: dbErr } = await (supabase as any)
+        .from("torre_grupos_andar")
+        .update({ planta_storage_path: null })
+        .eq("id", grupoId);
+      if (dbErr) throw dbErr;
+
+      toast.success("Planta removida.");
+      qc.invalidateQueries({ queryKey: ["obra-torres-estrutura", obraId] });
+      qc.invalidateQueries({ queryKey: ["obra-torres", obraId] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao remover planta.");
+    }
+  };
+
   const handlePlantaUpload = async (grupoId: string, torreId: string, file: File) => {
     try {
       const imageCompression = (await import("browser-image-compression")).default;
@@ -971,11 +1036,7 @@ function EstruturaObraDialog({ obraId, onClose }: { obraId: string; onClose: () 
                     variant="ghost"
                     size="sm"
                     className="text-destructive h-7"
-                    onClick={() => {
-                      if (confirm(`Remover "${torre.nome}" e todos seus andares?`)) {
-                        delTorre.mutate(torre.id);
-                      }
-                    }}
+                    onClick={() => setConfirmTorreDelete({ id: torre.id, nome: torre.nome })}
                   >
                     <Trash2 className="size-3.5" />
                   </Button>
@@ -993,7 +1054,40 @@ function EstruturaObraDialog({ obraId, onClose }: { obraId: string; onClose: () 
                     </div>
                     <div className="flex items-center gap-2">
                       {g.planta_storage_path ? (
-                        <span className="text-success text-[0.65rem]">✓ Planta enviada</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-success text-[0.65rem] flex items-center gap-1">
+                            <CheckCircle2 className="size-3" />
+                            Planta enviada
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            id={`planta-replace-${g.id}`}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) void handlePlantaUpload(g.id, torre.id, file);
+                            }}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-5 hover:text-primary"
+                            onClick={() => document.getElementById(`planta-replace-${g.id}`)?.click()}
+                            title="Substituir planta"
+                          >
+                            <Upload className="size-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-5 text-destructive hover:bg-destructive/10"
+                            onClick={() => setConfirmPlantaDelete(g.id)}
+                            title="Remover planta"
+                          >
+                            <Trash2 className="size-3" />
+                          </Button>
+                        </div>
                       ) : (
                         <>
                           <input
@@ -1095,6 +1189,52 @@ function EstruturaObraDialog({ obraId, onClose }: { obraId: string; onClose: () 
           ))
         )}
       </div>
+
+      <AlertDialog open={!!confirmTorreDelete} onOpenChange={(open) => !open && setConfirmTorreDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover torre?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você está prestes a remover a <strong>{confirmTorreDelete?.nome}</strong>. Todos os andares vinculados a ela serão perdidos. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              onClick={() => {
+                if (confirmTorreDelete) delTorre.mutate(confirmTorreDelete.id);
+                setConfirmTorreDelete(null);
+              }}
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!confirmPlantaDelete} onOpenChange={(open) => !open && setConfirmPlantaDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover planta do andar?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover a imagem da planta-baixa deste andar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              onClick={() => {
+                if (confirmPlantaDelete) handleRemovePlanta(confirmPlantaDelete);
+                setConfirmPlantaDelete(null);
+              }}
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DialogContent>
   );
 }
@@ -1162,7 +1302,7 @@ function ObraDocumentosDialog({ obraId }: { obraId: string }) {
         onChange={(e) => void upload(e.target.files)}
       />
       <Button variant="outline" onClick={() => document.getElementById("obra-docs-input")?.click()}>
-        <FileDown className="size-4" /> Enviar documento
+        <Upload className="size-4 mr-2" /> Enviar documento
       </Button>
       <ul className="text-sm divide-y mt-2 max-h-48 overflow-y-auto">
         {docs.data?.map((d) => (
@@ -1187,15 +1327,15 @@ function RdoTab({ obraId }: { obraId: string }) {
   const handleCreate = async () => {
     try {
       const today = new Date().toISOString().split("T")[0];
-      const rdoExistente = rdos?.find((r) => r.data === today);
+      const rdoExistente = rdos?.find((r) => r.data === today && (!r.tipo || r.tipo === "diario"));
       
       if (rdoExistente) {
-        toast.info("Você já possui um RDO para a data de hoje. Abrindo RDO existente...");
+        toast.info("Você já possui um RDO Diário para a data de hoje. Abrindo RDO existente...");
         navigate({ to: "/obras/$obraId/rdos/$rdoId", params: { obraId, rdoId: rdoExistente.id } });
         return;
       }
       
-      const rdo = await createMut.mutateAsync({ obra_id: obraId, data: today });
+      const rdo = await createMut.mutateAsync({ obra_id: obraId, data: today, tipo: "diario" });
 
       // Fetch Weather automatically
       try {
@@ -1227,6 +1367,43 @@ function RdoTab({ obraId }: { obraId: string }) {
     }
   };
 
+  const handleCreateSemanal = async () => {
+    try {
+      const today = new Date();
+      // Adjust to consider last monday
+      const day = today.getDay(); // 0=Sun, 1=Mon...
+      const monday = new Date(today);
+      monday.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
+      
+      const requiredDays = [];
+      for (let i = 0; i < 5; i++) { // Seg a Sex
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        requiredDays.push(d.toISOString().split("T")[0]);
+      }
+
+      const missing = requiredDays.filter(date => !rdos?.find(r => r.data === date && (!r.tipo || r.tipo === 'diario')));
+
+      if (missing.length > 0) {
+        toast.error(`Para gerar o RDO Semanal, você precisa preencher os RDOs diários de todos os dias úteis. Faltam: ${missing.map(d => format(new Date(d + "T12:00:00"), "dd/MM")).join(", ")}`);
+        return;
+      }
+
+      const friday = requiredDays[4];
+      const rdoSemanalExistente = rdos?.find((r) => r.data === friday && r.tipo === 'semanal');
+      if (rdoSemanalExistente) {
+        toast.info("Você já possui um RDO Semanal para esta semana. Abrindo...");
+        navigate({ to: "/obras/$obraId/rdos/$rdoId", params: { obraId, rdoId: rdoSemanalExistente.id } });
+        return;
+      }
+
+      const rdo = await createMut.mutateAsync({ obra_id: obraId, data: friday, tipo: "semanal" });
+      navigate({ to: "/obras/$obraId/rdos/$rdoId", params: { obraId, rdoId: rdo.id } });
+    } catch (e: any) {
+      toast.error("Erro ao criar RDO Semanal: " + e.message);
+    }
+  };
+
   if (isLoading) {
     return <div className="flex justify-center py-12"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>;
   }
@@ -1238,9 +1415,14 @@ function RdoTab({ obraId }: { obraId: string }) {
           <FileText className="size-4 text-primary" />
           Relatórios Diários de Obra
         </CardTitle>
-        <Button size="sm" onClick={handleCreate} disabled={createMut.isPending}>
-          <Plus className="size-4 mr-2" /> Novo RDO
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={handleCreateSemanal} disabled={createMut.isPending}>
+            Novo RDO Semanal
+          </Button>
+          <Button size="sm" onClick={handleCreate} disabled={createMut.isPending}>
+            <Plus className="size-4 mr-2" /> Novo RDO
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {!rdos?.length ? (
@@ -1252,6 +1434,9 @@ function RdoTab({ obraId }: { obraId: string }) {
                 <div>
                   <div className="font-medium text-sm flex items-center gap-2">
                     RDO #{rdo.numero_sequencial}
+                    {rdo.tipo === "semanal" && (
+                      <Badge variant="secondary" className="bg-primary/10 text-primary">SEMANAL</Badge>
+                    )}
                     <Badge variant="outline" className={rdo.status === "aprovado" ? "text-success border-success" : ""}>
                       {rdo.status.toUpperCase()}
                     </Badge>

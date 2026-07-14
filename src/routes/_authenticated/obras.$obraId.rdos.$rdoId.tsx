@@ -152,7 +152,12 @@ function RdoEditorPage() {
             <ChevronLeft className="size-5" />
           </Button>
           <div>
-            <h1 className="font-semibold text-sm">RDO #{rdo.numero_sequencial}</h1>
+            <h1 className="font-semibold text-sm flex items-center gap-2">
+              RDO #{rdo.numero_sequencial}
+              {rdo.tipo === "semanal" && (
+                <Badge variant="secondary" className="bg-primary/10 text-primary scale-90">SEMANAL</Badge>
+              )}
+            </h1>
             <p className="text-xs text-muted-foreground">{new Date(rdo.data).toLocaleDateString('pt-BR')}</p>
           </div>
         </div>

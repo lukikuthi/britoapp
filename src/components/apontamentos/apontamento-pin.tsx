@@ -30,6 +30,7 @@ export function ApontamentoPin({
         "absolute flex items-center justify-center",
         "rounded-full font-bold text-white text-xs leading-none",
         "transition-transform duration-150 ease-out",
+        "animate-in fade-in zoom-in-75 slide-in-from-top-2 duration-300",
         "focus-visible:outline-none",
         "hover:scale-110",
         isAberto

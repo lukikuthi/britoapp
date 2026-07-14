@@ -44,6 +44,7 @@ export function PlantaBaixaViewer({
   const [scale, setScale] = useState(1);
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   // Refs for drag tracking (avoid stale closures)
   const dragStart = useRef({ x: 0, y: 0 });
@@ -215,24 +216,23 @@ export function PlantaBaixaViewer({
   }
 
   // ----- Pin creation from click position -----
+  // KEY FIX: Use the image element's actual bounding rect to compute
+  // exact coordinates, avoiding naturalWidth/Height mismatch.
 
   function createPinAtEvent(e: React.PointerEvent) {
     const img = imageRef.current;
-    const container = containerRef.current;
-    if (!img || !container) return;
+    if (!img) return;
 
-    const rect = container.getBoundingClientRect();
-    // Click position in container space
-    const containerX = e.clientX - rect.left;
-    const containerY = e.clientY - rect.top;
+    // Get the image's actual rendered bounding rect (includes transform)
+    const imgRect = img.getBoundingClientRect();
 
-    // Convert to image-space coordinates
-    const imgX = (containerX - translate.x) / scale;
-    const imgY = (containerY - translate.y) / scale;
+    // Click position relative to the rendered image
+    const clickX = e.clientX - imgRect.left;
+    const clickY = e.clientY - imgRect.top;
 
-    // Convert to 0-1 percentages
-    const posX = imgX / img.naturalWidth;
-    const posY = imgY / img.naturalHeight;
+    // Convert to 0-1 percentages using the rendered dimensions
+    const posX = clickX / imgRect.width;
+    const posY = clickY / imgRect.height;
 
     // Ensure within bounds
     if (posX < 0 || posX > 1 || posY < 0 || posY > 1) return;
@@ -272,40 +272,43 @@ export function PlantaBaixaViewer({
             transformOrigin: "0 0",
             willChange: "transform",
           }}
-          className="relative"
+          className="relative inline-block"
         >
-          {/* Floor plan image */}
+          {/* Floor plan image — width:100% fits to container */}
           <img
             ref={imageRef}
             src={imageUrl}
             alt="Planta baixa"
-            className="block max-w-none pointer-events-none"
+            className="block w-full h-auto pointer-events-none"
             draggable={false}
+            onLoad={() => setImageLoaded(true)}
           />
 
-          {/* Pins layer - positioned relative to image, scaled inversely */}
-          <div
-            className="absolute inset-0"
-            style={{
-              /* Pins stay same visual size regardless of zoom */
-              transform: `scale(${1 / scale})`,
-              transformOrigin: "0 0",
-              width: `${scale * 100}%`,
-              height: `${scale * 100}%`,
-            }}
-          >
-            {numberedPins.map((pin) => (
-              <ApontamentoPin
-                key={pin.id}
-                numero={pin.numero}
-                posX={pin.pos_x}
-                posY={pin.pos_y}
-                status={pin.status}
-                selected={pin.id === selectedPinId}
-                onClick={() => onPinSelect(pin.id)}
-              />
-            ))}
-          </div>
+          {/* Pins layer — sits exactly over the image, same dimensions */}
+          {imageLoaded && (
+            <div
+              className="absolute inset-0"
+              style={{
+                /* Pins stay same visual size regardless of zoom */
+                transform: `scale(${1 / scale})`,
+                transformOrigin: "0 0",
+                width: `${scale * 100}%`,
+                height: `${scale * 100}%`,
+              }}
+            >
+              {numberedPins.map((pin) => (
+                <ApontamentoPin
+                  key={pin.id}
+                  numero={pin.numero}
+                  posX={pin.pos_x}
+                  posY={pin.pos_y}
+                  status={pin.status}
+                  selected={pin.id === selectedPinId}
+                  onClick={() => onPinSelect(pin.id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -345,7 +348,7 @@ export function PlantaBaixaViewer({
 
       {/* Adding-pin mode indicator */}
       {addingPin && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium shadow-md">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium shadow-md animate-pulse">
           Clique na planta para posicionar o apontamento
         </div>
       )}
