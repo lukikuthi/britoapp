@@ -1,0 +1,1 @@
+import{n as e,u as t}from"./dist-B1X_ejQU.js";var n=t(),r={sm:`h-10`,md:`h-12`,lg:`h-16`,xl:`h-24`};function i({className:t,size:i=`md`,showText:a=!0}){return a?(0,n.jsx)(`img`,{src:`/brito-logo.png`,alt:`Brito Engenharia e Instalações`,className:e(`w-auto object-contain shrink-0`,r[i],t)}):null}export{i as t};
