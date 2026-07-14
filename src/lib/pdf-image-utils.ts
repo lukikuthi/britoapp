@@ -1,4 +1,5 @@
 /** Utilitários compartilhados para imagens em PDFs (proporção correta, logo, etc.) */
+import { assetUrl } from "@/lib/asset-url";
 
 export async function fetchImageAsBase64(url: string): Promise<string> {
   const res = await fetch(url);
@@ -66,7 +67,7 @@ let logoBase64Cache: string | null = null;
 export async function getPdfLogoBase64(): Promise<string | null> {
   if (logoBase64Cache) return logoBase64Cache;
   try {
-    logoBase64Cache = await fetchImageAsBase64("/brito-logo.png");
+    logoBase64Cache = await fetchImageAsBase64(assetUrl("/brito-logo.png"));
     return logoBase64Cache;
   } catch {
     return null;
