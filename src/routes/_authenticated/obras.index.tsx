@@ -240,7 +240,7 @@ function ObraDialog({ obra, onClose }: { obra: Obra | null; onClose: () => void 
           <Label>Endereço</Label>
           <Input value={form.endereco} onChange={(e) => setForm({ ...form, endereco: e.target.value })} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div className="space-y-2">
             <Label>Cidade</Label>
             <Input value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} />
@@ -250,7 +250,7 @@ function ObraDialog({ obra, onClose }: { obra: Obra | null; onClose: () => void 
             <Input maxLength={2} value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value.toUpperCase() })} />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3 tour-form-latlng">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 tour-form-latlng">
           <div className="space-y-2">
             <Label>Latitude</Label>
             <Input type="number" step="any" value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} />
@@ -267,7 +267,7 @@ function ObraDialog({ obra, onClose }: { obra: Obra | null; onClose: () => void 
           <Label>Responsável técnico</Label>
           <Input value={form.responsavel_tecnico} onChange={(e) => setForm({ ...form, responsavel_tecnico: e.target.value })} />
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div className="space-y-2">
             <Label>Início</Label>
             <Input type="date" value={form.data_inicio} onChange={(e) => setForm({ ...form, data_inicio: e.target.value })} />
