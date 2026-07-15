@@ -35,7 +35,7 @@ export function AppLoadingScreen({ ready = false, onHidden }: AppLoadingScreenPr
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <img
-              src={assetUrl("/gif.gif?v=2")}
+              src={assetUrl("/gifnovo.gif?v=3")}
               alt="Carregando..."
               className="h-64 md:h-96 w-auto max-w-[90vw] object-contain"
             />
