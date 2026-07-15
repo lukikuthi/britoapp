@@ -25,6 +25,7 @@ function AuthenticatedLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [dark, setDark] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("brito-theme") === "dark";
@@ -65,7 +66,8 @@ function AuthenticatedLayout() {
   return (
     <div className="min-h-screen flex bg-background">
       {/* Sidebar desktop */}
-      <aside className="hidden md:flex md:w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
+      {!sidebarCollapsed && (
+        <aside className="hidden md:flex md:w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border shrink-0 transition-all duration-300">
         <div className="p-4 border-b border-sidebar-border">
           <BritoLogo size="sm" />
         </div>
@@ -118,6 +120,7 @@ function AuthenticatedLayout() {
           </div>
         </div>
       </aside>
+      )}
 
       {/* Mobile drawer */}
       {open && (
@@ -184,7 +187,12 @@ function AuthenticatedLayout() {
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar desktop */}
-        <header className="hidden md:flex items-center justify-end p-3 border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-30 shadow-sm">
+        <header className="hidden md:flex items-center justify-between p-3 border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-30 shadow-sm">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} title="Alternar menu">
+              <Menu className="size-5" />
+            </Button>
+          </div>
           <Button variant="ghost" size="icon" onClick={() => setDark((d) => !d)} title="Alternar tema">
             {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
           </Button>
