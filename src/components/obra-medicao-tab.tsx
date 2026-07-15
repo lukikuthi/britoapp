@@ -125,7 +125,7 @@ export function ObraMedicaoTab({ obraId, isAdmin = false }: ObraMedicaoTabProps)
             Controle de quantidades executadas por item de serviço.
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible sm:pb-0 scrollbar-hide shrink-0 snap-x">
           <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
             <Upload className="size-4 mr-1" />
             Importar Planilha

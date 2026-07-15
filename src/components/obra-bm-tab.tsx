@@ -125,7 +125,7 @@ function CreateBmDialog({ obraId }: { obraId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 transition-all">
+        <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 transition-all w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
           Novo Boletim
         </Button>
