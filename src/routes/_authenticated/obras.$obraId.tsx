@@ -258,15 +258,13 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
                             {ap.andarLabel} · {format(new Date(ap.created_at), "dd/MM/yyyy", { locale: ptBR })}
                           </span>
                         </div>
-                        <Badge
-                          variant="outline"
-                          className={ap.status === "aberto"
-                            ? "bg-destructive/10 text-destructive border-destructive/30"
-                            : "bg-success/15 text-success-foreground border-success/30"
-                          }
+                        <span
+                          className={`text-sm font-medium ${
+                            ap.status === "aberto" ? "text-destructive" : "text-success"
+                          }`}
                         >
                           {ap.status === "aberto" ? "Aberto" : "Resolvido"}
-                        </Badge>
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -1047,7 +1045,7 @@ function EstruturaObraDialog({ obraId, onClose }: { obraId: string; onClose: () 
                   <div key={g.id} className="text-xs border rounded p-2 space-y-1.5">
                     <div className="flex justify-between">
                       <span className="font-medium">{g.nome_grupo}</span>
-                      <Badge variant="outline" className="text-[0.6rem]">{g.tipo_andar}</Badge>
+                      <span className="text-[0.65rem] font-medium text-muted-foreground uppercase">{g.tipo_andar}</span>
                     </div>
                     <div className="text-muted-foreground">
                       Andares {g.andar_inicial} a {g.andar_final}
@@ -1434,12 +1432,14 @@ function RdoTab({ obraId }: { obraId: string }) {
                 <div>
                   <div className="font-medium text-sm flex items-center gap-2">
                     RDO #{rdo.numero_sequencial}
-                    {rdo.tipo === "semanal" && (
-                      <Badge variant="secondary" className="bg-primary/10 text-primary">SEMANAL</Badge>
-                    )}
-                    <Badge variant="outline" className={rdo.status === "aprovado" ? "text-success border-success" : ""}>
-                      {rdo.status.toUpperCase()}
-                    </Badge>
+                    <div className="flex items-center gap-3">
+                      {rdo.tipo === "semanal" && (
+                        <span className="text-xs font-semibold text-primary">SEMANAL</span>
+                      )}
+                      <span className={`text-sm font-medium ${rdo.status === "aprovado" ? "text-success" : "text-muted-foreground"}`}>
+                        {rdo.status.toUpperCase()}
+                      </span>
+                    </div>
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
                     {format(new Date(rdo.data), "dd/MM/yyyy")}
