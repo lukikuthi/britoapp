@@ -1410,16 +1410,16 @@ function RdoTab({ obraId }: { obraId: string }) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-2 gap-4">
         <CardTitle className="text-base flex items-center gap-2">
-          <FileText className="size-4 text-primary" />
+          <FileText className="size-4 text-primary shrink-0" />
           Relatórios Diários de Obra
         </CardTitle>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={handleCreateSemanal} disabled={createMut.isPending}>
+        <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 scrollbar-hide snap-x">
+          <Button size="sm" variant="outline" className="shrink-0" onClick={handleCreateSemanal} disabled={createMut.isPending}>
             Novo RDO Semanal
           </Button>
-          <Button size="sm" onClick={handleCreate} disabled={createMut.isPending}>
+          <Button size="sm" className="shrink-0" onClick={handleCreate} disabled={createMut.isPending}>
             <Plus className="size-4 mr-2" /> Novo RDO
           </Button>
         </div>

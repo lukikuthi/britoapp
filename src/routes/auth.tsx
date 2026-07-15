@@ -127,7 +127,7 @@ function AuthPage() {
         </Card>
       </main>
       <footer className="text-center text-xs text-sidebar-foreground/60 pb-6" suppressHydrationWarning>
-        © {new Date().getFullYear()} BRITO ENGENHARIA · PROJETO MATRIZ · Desenvolvido por Lucas Kikuthi
+        © {new Date().getFullYear()} BRITO ENGENHARIA · Desenvolvido por Lucas Kikuthi
       </footer>
     </div>
   );
