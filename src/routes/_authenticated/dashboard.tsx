@@ -150,25 +150,18 @@ function Dashboard() {
                       <ChevronRight className="size-5 text-muted-foreground shrink-0 mt-1" />
                     </div>
                     
-                    <div className="flex flex-wrap items-center gap-2 mt-auto">
-                      <Badge
-                        variant="outline"
-                        className={
-                          o.status === "em_andamento"
-                            ? "bg-primary/15 text-primary border-primary/30"
-                            : ""
-                        }
-                      >
+                    <div className="flex flex-wrap items-center gap-2 mt-auto text-sm font-medium">
+                      <span className={o.status === "em_andamento" ? "text-primary" : "text-muted-foreground"}>
                         {OBRA_STATUS_LABEL[o.status]}
-                      </Badge>
+                      </span>
                       {abertos > 0 && (
-                        <span className="text-xs text-destructive font-medium bg-destructive/10 px-2 py-0.5 rounded-full">
-                          {abertos} apontamento{abertos !== 1 ? "s" : ""}
+                        <span className="text-destructive">
+                          • {abertos} apontamento{abertos !== 1 ? "s" : ""}
                         </span>
                       )}
                       {(rdosQ.data?.get(o.id) ?? 0) > 0 && (
-                        <span className="text-xs text-amber-600 dark:text-amber-500 font-medium bg-amber-500/10 px-2 py-0.5 rounded-full">
-                          {rdosQ.data!.get(o.id)} RDO{rdosQ.data!.get(o.id)! !== 1 ? "s" : ""}
+                        <span className="text-amber-600 dark:text-amber-500">
+                          • {rdosQ.data!.get(o.id)} RDO{rdosQ.data!.get(o.id)! !== 1 ? "s" : ""}
                         </span>
                       )}
                     </div>

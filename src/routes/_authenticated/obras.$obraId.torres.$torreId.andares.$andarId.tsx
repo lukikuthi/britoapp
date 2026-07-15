@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, Plus, Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
+import { useConfirmStore } from "@/components/confirm-dialog";
 import {
   useAndarDetail,
   useAndarApontamentos,
@@ -88,8 +89,8 @@ function AndarDetailPage() {
   );
 
   const handleDelete = useCallback(
-    (id: string) => {
-      if (!confirm("Excluir este apontamento?")) return;
+    async (id: string) => {
+      if (!(await useConfirmStore.getState().confirm("Excluir este apontamento?", "Excluir apontamento"))) return;
       deleteMut.mutate(
         { id, andarId, obraId },
         {

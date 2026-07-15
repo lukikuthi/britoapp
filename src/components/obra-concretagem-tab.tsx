@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Plus, Edit, Trash2, Truck, Droplets, MapPin, Hash, CheckCircle2, Clock, XCircle, AlertCircle } from "lucide-react";
 
+import { useConfirmStore } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -148,8 +149,9 @@ export function ObraConcretagemTab({ obraId }: { obraId: string }) {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Tem certeza que deseja excluir este registro de concretagem?")) {
+  async function handleDelete(id: string) {
+    const ok = await useConfirmStore.getState().confirm("Tem certeza que deseja excluir este registro de concretagem?", "Excluir concretagem");
+    if (ok) {
       try {
         await deleteMutation.mutateAsync({ id });
         toast.success("Registro excluído com sucesso");

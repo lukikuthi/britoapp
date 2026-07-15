@@ -26,7 +26,7 @@ export function ObraBottomNav({ obraId, active }: ObraBottomNavProps) {
   const navigate = useNavigate();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/50 bg-background/80 backdrop-blur-xl md:left-64 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/50 bg-background/80 backdrop-blur-xl md:left-[var(--sidebar-width)] transition-all duration-300 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] pb-safe">
       <div className="relative">
         {/* Scroll fade indicators */}
         <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-background/80 to-transparent z-10 sm:hidden" />

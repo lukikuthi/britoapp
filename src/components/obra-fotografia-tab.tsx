@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Camera, FileDown, Loader2, Plus, Trash2 } from "lucide-react";
+import { useConfirmStore } from "@/components/confirm-dialog";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import { generateFotografiaPdf } from "@/lib/fotografia-pdf-generator";
 
@@ -115,7 +117,7 @@ function FotografiaCard({
   }
 
   async function handleRemove() {
-    if (!confirm("Remover este registro fotográfico?")) return;
+    if (!(await useConfirmStore.getState().confirm("Remover este registro fotográfico?", "Remover foto"))) return;
     try {
       if (item.storage_path) {
         const { error: stErr } = await supabase.storage.from("rdo-midias").remove([item.storage_path]);

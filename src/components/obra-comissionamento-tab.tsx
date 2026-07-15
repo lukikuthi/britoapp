@@ -1,4 +1,6 @@
 import { useState, useRef } from "react";
+import { useConfirmStore } from "@/components/confirm-dialog";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
@@ -249,8 +251,9 @@ export function ObraComissionamentoTab({ obraId, isAdmin }: { obraId: string; is
                                   </DropdownMenuItem>
                                   <DropdownMenuItem 
                                     className="text-destructive"
-                                    onClick={() => {
-                                      if(confirm("Deseja realmente excluir este laudo?")) {
+                                    onClick={async () => {
+                                      const ok = await useConfirmStore.getState().confirm("Deseja realmente excluir este laudo?", "Excluir laudo");
+                                      if(ok) {
                                         deleteLaudo.mutate({ id: laudo.id, obraId, arquivoPath: laudo.arquivo_path });
                                       }
                                     }}

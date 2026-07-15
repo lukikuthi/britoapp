@@ -10,6 +10,7 @@ import { RdoFotografiasSection } from "@/components/rdo-fotografias";
 import { generateRdoPdf } from "@/lib/pdf-generator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useConfirmStore } from "@/components/confirm-dialog";
 import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_authenticated/obras/$obraId/rdos/$rdoId")({
@@ -27,7 +28,7 @@ function RdoEditorPage() {
 
   const handleClone = async () => {
     if (!rdo) return;
-    if (!confirm("Isso irá importar Mão de Obra e Equipamentos do último RDO. Deseja continuar?")) return;
+    if (!(await useConfirmStore.getState().confirm("Isso irá importar Mão de Obra e Equipamentos do último RDO. Deseja continuar?", "Importar dados"))) return;
     try {
       await cloneMut.mutateAsync({ obraId, currentRdoId: rdoId, currentDate: rdo.data });
       toast.success("Dados copiados com sucesso!");
@@ -37,7 +38,7 @@ function RdoEditorPage() {
   };
 
   const handleApprove = async () => {
-    if (!confirm("Tem certeza que deseja aprovar este RDO? Ele não poderá ser editado depois.")) return;
+    if (!(await useConfirmStore.getState().confirm("Tem certeza que deseja aprovar este RDO? Ele não poderá ser editado depois.", "Aprovar RDO"))) return;
     try {
       await updateMut.mutateAsync({ id: rdoId, status: "aprovado" });
       toast.success("RDO aprovado com sucesso!");

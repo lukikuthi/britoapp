@@ -210,9 +210,9 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{obra.data.nome}</h1>
-            <Badge variant="outline" className="mt-1 bg-primary/10 text-primary border-primary/30">
+            <div className="mt-1 text-sm font-medium text-primary">
               {OBRA_STATUS_LABEL[obra.data.status]}
-            </Badge>
+            </div>
           </div>
         </div>
 

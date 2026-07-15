@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChevronDown, ChevronRight, Plus, Trash2, Edit2, Check, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useConfirmStore } from "@/components/confirm-dialog";
 
 interface RdoSectionProps {
   rdoId: string;
@@ -45,7 +46,7 @@ export function RdoSection({ rdoId, tableName, title, FormComponent, renderRow, 
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Deseja realmente remover este item?")) return;
+    if (!(await useConfirmStore.getState().confirm("Deseja realmente remover este item?", "Remover item"))) return;
     try {
       await deleteMut.mutateAsync({ table: tableName, rdoId, id });
       toast.success("Removido com sucesso");
