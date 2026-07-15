@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useConfirmStore } from "@/components/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -117,8 +118,8 @@ function ObrasPage() {
                     size="sm"
                     variant="ghost"
                     className="text-destructive hover:bg-destructive/10"
-                    onClick={() => {
-                      if (confirm(`Remover a obra "${o.nome}"? Esta ação não pode ser desfeita.`)) {
+                    onClick={async () => {
+                      if (await useConfirmStore.getState().confirm(`Remover a obra "${o.nome}"? Esta ação não pode ser desfeita.`, "Remover obra")) {
                         del.mutate(o.id);
                       }
                     }}

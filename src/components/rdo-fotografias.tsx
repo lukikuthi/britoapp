@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useRdoTable, useAddRdoTableItem, useDeleteRdoTableItem } from "@/hooks/use-rdo";
+import { useConfirmStore } from "@/components/confirm-dialog";
 import { ChevronDown, ChevronRight, Image as ImageIcon, Loader2, Upload, Trash2, Check, X } from "lucide-react";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
@@ -92,7 +93,7 @@ export function RdoFotografiasSection({ rdoId, obraId }: RdoFotografiasProps) {
   };
 
   const handleDelete = async (id: string, storagePath: string) => {
-    if (!confirm("Deseja remover esta foto do RDO?")) return;
+    if (!(await useConfirmStore.getState().confirm("Deseja remover esta foto do RDO?", "Remover foto"))) return;
     try {
       await deleteMut.mutateAsync({ table: "rdo_midias", rdoId, id });
       // Only delete from storage if it belongs strictly to this RDO (starts with obraId/rdoId/)

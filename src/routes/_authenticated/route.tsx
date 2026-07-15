@@ -64,7 +64,10 @@ function AuthenticatedLayout() {
   ].filter((i) => i.show);
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div 
+      className="min-h-screen flex bg-background transition-all duration-300" 
+      style={{ "--sidebar-width": sidebarCollapsed ? "0px" : "256px" } as React.CSSProperties}
+    >
       {/* Sidebar desktop */}
       {!sidebarCollapsed && (
         <aside className="hidden md:flex md:w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border shrink-0 transition-all duration-300">

@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useFvrs, useCreateFvr, useFvrItensDisponiveis, useDeleteFvr } from "@/hooks/use-fvr";
 import { CheckCircle2, ClipboardCheck, FileText, Loader2, PackageOpen, Plus, Trash2, XCircle } from "lucide-react";
+import { useConfirmStore } from "@/components/confirm-dialog";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 
@@ -54,7 +56,7 @@ export function ObraFvrTab({ obraId }: { obraId: string }) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta FVR?")) return;
+    if (!(await useConfirmStore.getState().confirm("Tem certeza que deseja excluir esta FVR?", "Excluir FVR"))) return;
     try {
       await deleteFvr.mutateAsync({ id, obraId });
       toast.success("FVR excluída com sucesso!");

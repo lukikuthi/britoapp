@@ -80,6 +80,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 import { GlobalTutorial } from "@/components/global-tutorial";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
@@ -89,6 +90,7 @@ function RootComponent() {
       <AuthProvider>
         <AppBoot />
         <Toaster />
+        <ConfirmDialog />
         <GlobalTutorial />
       </AuthProvider>
     </QueryClientProvider>
