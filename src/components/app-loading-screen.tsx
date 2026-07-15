@@ -23,7 +23,7 @@ export function AppLoadingScreen({ ready = false, onHidden }: AppLoadingScreenPr
         <motion.div
           key="splash"
           className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white overflow-hidden shadow-2xl"
-          initial={{ opacity: 0, y: 0 }}
+          initial={{ opacity: 1, y: 0 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ y: "-100%" }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
