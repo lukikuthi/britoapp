@@ -9,85 +9,97 @@ import {
   getImageDimensions, 
   getImageFormatFromDataUrl, 
   fitImageInBox,
-  addImageFitted
+  addImageFitted,
+  getPdfLogoBase64
 } from "@/lib/pdf-image-utils";
+import { appendApontamentosToPdf } from "@/lib/pdf-apontamentos";
 
-export async function generateRdoPdf(rdo: any, sections: any, obraId: string): Promise<Blob> {
+export async function generateRdoPdf(rdo: any, sections: any, obraId: string, appendApontamentos: boolean = true): Promise<Blob> {
   const doc = new jsPDF("p", "mm", "a4");
   const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
+  const dateStr = format(new Date(), "dd/MM/yyyy HH:mm:ss");
   
   // Buscar Obra
   const { data: obra } = await supabase.from("obras").select("nome, endereco").eq("id", obraId).single();
-  const obraNome = obra?.nome || "Obra Não Encontrada";
+  const obraNome = obra?.nome || "Obra";
   
-  // Header
-  doc.setFillColor(41, 128, 185); // Blue
-  doc.rect(0, 0, pageWidth, 25, "F");
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
-  doc.text("Relatório Diário de Obra", 15, 16);
+  // CAPA: Issue Reporting Style
+  const logoUrl = await getPdfLogoBase64();
+  if (logoUrl) {
+    const { width, height } = await getImageDimensions(logoUrl);
+    const fit = fitImageInBox(width, height, 40, 15);
+    doc.addImage(logoUrl, "PNG", 15, 10, fit.width, fit.height);
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(24);
+  doc.setTextColor(0, 0, 0);
+  const rdoTitle = rdo.tipo === 'semanal' ? "RDO Semanal" : "RDO Diário";
+  doc.text(rdoTitle, pageWidth - 15, 20, { align: "right" });
   
   doc.setFontSize(10);
-  doc.text(`RDO #${rdo.numero_sequencial}`, pageWidth - 15, 16, { align: "right" });
+  doc.setFont("helvetica", "normal");
+  doc.text(`Criado em: ${dateStr}`, pageWidth - 15, 26, { align: "right" });
 
-  // Info base
-  doc.setTextColor(0, 0, 0);
-  doc.setFontSize(11);
-  doc.text(`Data: ${format(new Date(rdo.data), "dd/MM/yyyy")}`, 15, 35);
-  doc.text(`Status: ${rdo.status.toUpperCase()}`, 15, 42);
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "bold");
+  doc.text("General Information", 15, 45);
 
-  // Clima
-  if (sections.clima && sections.clima.length > 0) {
-    doc.setFontSize(12);
-    doc.text("Condições Climáticas", 15, currentY);
-    autoTable(doc, {
-      startY: currentY + 5,
-      head: [["Período", "Condição", "Praticável", "Impacta Prazo?"]],
-      body: sections.clima.map((item: any) => [
-        item.periodo.toUpperCase(), 
-        item.condicao.toUpperCase(), 
-        item.praticavel ? "Sim" : "Não", 
-        item.impacta_prazo ? "SIM" : "Não"
-      ]),
-      theme: 'grid',
-      headStyles: { fillColor: [41, 128, 185] },
-      didParseCell: function(data) {
-        if (data.section === 'body' && data.column.index === 3 && data.cell.raw === 'SIM') {
-          data.cell.styles.textColor = [220, 53, 53];
-          data.cell.styles.fontStyle = 'bold';
-        }
-      }
-    });
-    currentY = (doc as any).lastAutoTable.finalY + 15;
-  }
+  autoTable(doc, {
+    startY: 50,
+    head: [],
+    body: [
+      ["ProjectName", obraNome],
+      ["Date", format(new Date(rdo.data), "dd/MM/yyyy")],
+      ["Sequence", `#${rdo.numero_sequencial}`],
+      ["Status", rdo.status.toUpperCase()],
+      ["Type", rdo.tipo.toUpperCase()]
+    ],
+    theme: 'plain',
+    styles: { cellPadding: 3, fontSize: 10, lineColor: [200, 200, 200], lineWidth: 0.1 },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 40 },
+      1: { cellWidth: 100 }
+    }
+  });
+
+  let currentY = (doc as any).lastAutoTable.finalY + 15;
+
+  const tableTheme = {
+    theme: 'plain' as const,
+    styles: { cellPadding: 3, fontSize: 9, lineColor: [220, 220, 220] as [number, number, number], lineWidth: 0.1 },
+    headStyles: { fillColor: [240, 240, 240] as [number, number, number], textColor: [0, 0, 0] as [number, number, number], fontStyle: 'bold' as const }
+  };
 
   // Mão de Obra
   if (sections.maoObra && sections.maoObra.length > 0) {
-    doc.setFontSize(12);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
     doc.text("Mão de Obra", 15, currentY);
     autoTable(doc, {
-      startY: currentY + 5,
-      head: [["Função", "Quantidade", "Tipo", "Observação"]],
+      startY: currentY + 3,
+      head: [["Função", "Qtd", "Tipo", "Observação"]],
       body: sections.maoObra.map((item: any) => [
         item.funcao, 
         item.quantidade.toString(), 
         item.tipo, 
         item.observacao || ""
       ]),
-      theme: 'grid',
-      headStyles: { fillColor: [41, 128, 185] }
+      ...tableTheme
     });
     currentY = (doc as any).lastAutoTable.finalY + 15;
   }
 
   // Equipamentos
   if (sections.equipamentos && sections.equipamentos.length > 0) {
-    doc.setFontSize(12);
+    if (currentY > pageHeight - 40) { doc.addPage(); currentY = 20; }
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
     doc.text("Equipamentos", 15, currentY);
     autoTable(doc, {
-      startY: currentY + 5,
-      head: [["Equipamento", "Qtd", "Status", "Horímetro", "Motivo Parada", "Obs"]],
+      startY: currentY + 3,
+      head: [["Equipamento", "Qtd", "Status", "Horímetro", "Motivo", "Obs"]],
       body: sections.equipamentos.map((item: any) => [
         item.nome, 
         item.quantidade.toString(), 
@@ -96,276 +108,79 @@ export async function generateRdoPdf(rdo: any, sections: any, obraId: string): P
         item.motivo_parada || "-",
         item.observacao || ""
       ]),
-      theme: 'grid',
-      headStyles: { fillColor: [41, 128, 185] }
+      ...tableTheme
     });
     currentY = (doc as any).lastAutoTable.finalY + 15;
   }
 
-  // Atividades / EAP
+  // Atividades
   if (sections.atividades && sections.atividades.length > 0) {
-    doc.setFontSize(12);
-    doc.text("Atividades (Avanço Físico - EAP)", 15, currentY);
+    if (currentY > pageHeight - 40) { doc.addPage(); currentY = 20; }
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Atividades Realizadas", 15, currentY);
     autoTable(doc, {
-      startY: currentY + 5,
-      head: [["Descrição", "Progresso", "Status", "Observação"]],
+      startY: currentY + 3,
+      head: [["Atividade", "Local", "Status", "Avanço"]],
       body: sections.atividades.map((item: any) => [
         item.descricao, 
-        `${item.progresso_pct}%`, 
+        item.local || "-", 
         item.status, 
-        item.observacao || ""
+        item.percentual_conclusao ? `${item.percentual_conclusao}%` : "-"
       ]),
-      theme: 'grid',
-      headStyles: { fillColor: [41, 128, 185] }
+      ...tableTheme
+    });
+    currentY = (doc as any).lastAutoTable.finalY + 15;
+  }
+
+  // Comentários
+  if (sections.comentarios && sections.comentarios.length > 0) {
+    if (currentY > pageHeight - 40) { doc.addPage(); currentY = 20; }
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Comentários", 15, currentY);
+    autoTable(doc, {
+      startY: currentY + 3,
+      head: [["Comentário", "Tipo"]],
+      body: sections.comentarios.map((item: any) => [
+        item.texto, 
+        item.tipo_comentario
+      ]),
+      ...tableTheme
     });
     currentY = (doc as any).lastAutoTable.finalY + 15;
   }
 
   // Ocorrências
   if (sections.ocorrencias && sections.ocorrencias.length > 0) {
-    doc.setFontSize(12);
-    doc.text("Ocorrências e Interferências", 15, currentY);
+    if (currentY > pageHeight - 40) { doc.addPage(); currentY = 20; }
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("Ocorrências", 15, currentY);
     autoTable(doc, {
-      startY: currentY + 5,
-      head: [["Descrição", "Gravidade", "Resolvido?", "Impacta Prazo?"]],
+      startY: currentY + 3,
+      head: [["Ocorrência", "Gravidade", "Impacto", "Status", "Ação"]],
       body: sections.ocorrencias.map((item: any) => [
         item.descricao, 
-        item.gravidade.toUpperCase(), 
-        item.resolvido ? "Sim" : "Não", 
-        item.impacta_prazo ? "SIM (CRÍTICO)" : "Não"
+        item.gravidade, 
+        item.impacto, 
+        item.status,
+        item.acao_tomada || "-"
       ]),
-      theme: 'grid',
-      headStyles: { fillColor: [220, 53, 53] }, // Red header for occurrences
-      didParseCell: function(data) {
-        if (data.section === 'body' && data.column.index === 3 && data.cell.raw === 'SIM (CRÍTICO)') {
-          data.cell.styles.textColor = [220, 53, 53];
-          data.cell.styles.fontStyle = 'bold';
-        }
-      }
+      ...tableTheme
     });
     currentY = (doc as any).lastAutoTable.finalY + 15;
   }
+  
+  // Footer on cover page
+  doc.setFontSize(8);
+  doc.setTextColor(150, 150, 150);
+  doc.text(`Created On: ${dateStr}`, 15, pageHeight - 15);
+  doc.text(`Created By: Sistema`, 15, pageHeight - 10);
 
-  // Checklists de Qualidade (FVS)
-  if (sections.fvs && sections.fvs.length > 0) {
-    doc.setFontSize(12);
-    doc.text("Checklists de Qualidade (FVS)", 15, currentY);
-    autoTable(doc, {
-      startY: currentY + 5,
-      head: [["Ficha de Verificação", "Status"]],
-      body: sections.fvs.map((item: any) => [
-        item.template?.nome || "FVS", 
-        item.status === 'concluido' ? 'Concluída' : 'Rascunho'
-      ]),
-      theme: 'grid',
-      headStyles: { fillColor: [41, 128, 185] }
-    });
-    currentY = (doc as any).lastAutoTable.finalY + 15;
-  }
-
-  // ==========================================
-  // Fotografias
-  // ==========================================
-  if (sections.midias && sections.midias.length > 0) {
-    const photoBoxW = 182;
-    const photoBoxH = 120;
-    let photosCount = 0;
-
-    for (const midia of sections.midias) {
-      if (midia.tipo !== "imagem") continue;
-      
-      doc.addPage("a4", "p");
-      photosCount++;
-      
-      await addPdfBrandedHeader(doc, "Registro fotográfico do RDO");
-
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.text(obraNome, 14, 35);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      doc.text(`RDO #${rdo.numero_sequencial} — ${format(new Date(rdo.data), "dd/MM/yyyy")}`, 14, 41);
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.text(midia.legenda || `Foto ${photosCount}`, 14, 58);
-
-      let y = 64;
-      try {
-        const { data: urlData } = supabase.storage.from("rdo-midias").getPublicUrl(midia.storage_path);
-        const imgData = await fetchImageAsBase64(urlData.publicUrl);
-        await addImageFitted(doc, imgData, 14, y, photoBoxW, photoBoxH);
-      } catch {
-        doc.setFont("helvetica", "italic");
-        doc.setFontSize(9);
-        doc.text("[Imagem não disponível]", 14, y);
-      }
-    }
-  }
-
-  // ==========================================
-  // Plantas e Apontamentos
-  // ==========================================
-  if (sections.andaresSelecionados && sections.andaresSelecionados.length > 0) {
-    // Buscar todos os andares selecionados com dados da torre
-    const andarIds = sections.andaresSelecionados.map((s: any) => s.andar_id);
-    
-    // Precisamos de torre_andares -> obra_torres e torre_grupos_andar
-    const { data: andaresData } = await supabase
-      .from("torre_andares" as any)
-      .select(`
-        id, numero_andar, apelido,
-        obra_torres!inner ( nome ),
-        torre_grupos_andar!inner ( planta_storage_path )
-      `)
-      .in("id", andarIds);
-
-    if (andaresData && andaresData.length > 0) {
-      // Buscar apontamentos para esses andares
-      const { data: apontamentosData } = await supabase
-        .from("apontamentos" as any)
-        .select("*")
-        .in("andar_id", andarIds);
-
-      const PAGE_W = 297; // A4 landscape
-      const PAGE_H = 210;
-      const MARGIN = 14;
-      const IMAGE_AREA_W = (PAGE_W - MARGIN * 2 - 8) * 0.60;
-      const LEGEND_X = MARGIN + IMAGE_AREA_W + 8;
-      
-      for (const andar of andaresData) {
-        doc.addPage("a4", "landscape");
-
-        // Header
-        doc.setFillColor(0, 43, 91);
-        doc.rect(0, 0, PAGE_W, 25, "F");
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(16);
-        doc.setFont("helvetica", "bold");
-        doc.text("BRITO ENGENHARIA", MARGIN, 12);
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "normal");
-        doc.text("Apontamentos Visuais — Anexo RDO", MARGIN, 20);
-        doc.setTextColor(0, 0, 0);
-
-        // Sub-header
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "bold");
-        doc.text(obraNome, MARGIN, 32);
-        
-        const floorLabel = andar.apelido || `Andar ${andar.numero_andar}`;
-        const torreNome = andar.obra_torres?.nome || "Torre";
-        doc.setFontSize(10);
-        doc.text(`${torreNome} — ${floorLabel}`, MARGIN, 40);
-
-        const plantaPath = andar.torre_grupos_andar?.planta_storage_path;
-        let imgX = MARGIN;
-        let imgY = 44;
-        let imgW = IMAGE_AREA_W;
-        let imgH = PAGE_H - 10 - imgY;
-        let imgDrawn = false;
-
-        if (plantaPath) {
-          try {
-            const { data: urlData } = await supabase.storage.from("plantas-baixa").createSignedUrl(plantaPath, 60);
-            if (urlData?.signedUrl) {
-              const imgData = await fetchImageAsBase64(urlData.signedUrl);
-              const dims = await getImageDimensions(imgData);
-              const fit = fitImageInBox(dims.width, dims.height, IMAGE_AREA_W, imgH);
-              const fmt = getImageFormatFromDataUrl(imgData);
-
-              imgX = MARGIN + fit.offsetX;
-              imgY = 44 + fit.offsetY;
-              imgW = fit.width;
-              imgH = fit.height;
-
-              doc.addImage(imgData, fmt, imgX, imgY, imgW, imgH);
-              imgDrawn = true;
-              
-              doc.setDrawColor(200, 200, 200);
-              doc.setLineWidth(0.3);
-              doc.rect(imgX, imgY, imgW, imgH, "S");
-            }
-          } catch (err) {
-            doc.setFont("helvetica", "italic");
-            doc.setFontSize(9);
-            doc.text("[Erro ao carregar planta]", MARGIN + 4, 50);
-          }
-        } else {
-          doc.setFont("helvetica", "italic");
-          doc.setFontSize(9);
-          doc.text("[Sem planta cadastrada]", MARGIN + 4, 50);
-        }
-
-        const aptsAndar = (apontamentosData || []).filter((a: any) => a.andar_id === andar.id);
-        
-        // Draw markers
-        if (imgDrawn) {
-          aptsAndar.forEach((ap: any, idx: number) => {
-            const num = idx + 1;
-            const mx = imgX + ap.pos_x * imgW;
-            const my = imgY + ap.pos_y * imgH;
-            
-            if (ap.status === "resolvido") doc.setFillColor(34, 139, 34);
-            else doc.setFillColor(220, 53, 53);
-            doc.circle(mx, my, 3.5, "F");
-            
-            doc.setDrawColor(255, 255, 255);
-            doc.setLineWidth(0.5);
-            doc.circle(mx, my, 3.5, "S");
-            
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(7);
-            doc.setFont("helvetica", "bold");
-            doc.text(String(num), mx, my + 1.2, { align: "center" });
-            doc.setTextColor(0, 0, 0);
-          });
-        }
-
-        // Legend
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "bold");
-        doc.text("Legenda", LEGEND_X, 44);
-        
-        doc.setFontSize(7);
-        doc.setFont("helvetica", "normal");
-        doc.setFillColor(220, 53, 53);
-        doc.circle(LEGEND_X + 2, 49, 2, "F");
-        doc.text("Aberto", LEGEND_X + 6, 50);
-        
-        doc.setFillColor(34, 139, 34);
-        doc.circle(LEGEND_X + 28, 49, 2, "F");
-        doc.text("Resolvido", LEGEND_X + 32, 50);
-
-        doc.setDrawColor(200, 200, 200);
-        doc.line(LEGEND_X, 53, PAGE_W - MARGIN, 53);
-
-        let legY = 58;
-        aptsAndar.forEach((ap: any, idx: number) => {
-          if (legY > PAGE_H - 15) return; // Prevent overflow
-          const num = idx + 1;
-          
-          if (ap.status === "resolvido") doc.setFillColor(34, 139, 34);
-          else doc.setFillColor(220, 53, 53);
-          
-          doc.circle(LEGEND_X + 2, legY - 1, 2.5, "F");
-          doc.setTextColor(255, 255, 255);
-          doc.setFontSize(6);
-          doc.setFont("helvetica", "bold");
-          doc.text(String(num), LEGEND_X + 2, legY - 0.2, { align: "center" });
-          
-          doc.setTextColor(0, 0, 0);
-          doc.setFontSize(8);
-          doc.setFont("helvetica", "normal");
-          
-          const maxW = PAGE_W - MARGIN - LEGEND_X - 8;
-          const textLines = doc.splitTextToSize(ap.descricao, maxW);
-          doc.text(textLines, LEGEND_X + 6, legY);
-          
-          legY += 2 + (textLines.length * 3.5);
-        });
-      }
-    }
+  // Append Apontamentos
+  if (appendApontamentos) {
+    await appendApontamentosToPdf(doc, obraId, {}, "Apontamentos e Plantas", true);
   }
 
   return doc.output("blob");
