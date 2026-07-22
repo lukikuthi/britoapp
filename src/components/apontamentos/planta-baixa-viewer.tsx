@@ -247,7 +247,7 @@ export function PlantaBaixaViewer({
   }));
 
   return (
-    <div className="relative w-full h-full min-h-[300px] select-none">
+    <div className="relative w-full h-full min-h-0 select-none">
       {/* Viewport */}
       <div
         ref={containerRef}
