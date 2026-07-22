@@ -186,7 +186,16 @@ function TorrePavimentosView() {
       // sort by numero_andar DESCENDING (top to bottom)
       .sort((a, b) => b.numero_andar - a.numero_andar)
       .forEach(p => {
-        const t = p.tipo_pavimento || "outros";
+        let t = (p.tipo_pavimento || "outros").toLowerCase().trim();
+        // Mapear valores legados
+        if (t === "subsolo" || t === "garagem") t = "garagem";
+        else if (t === "térreo" || t === "terreo") t = "terreo";
+        else if (t === "mezanino" || t === "pilotis") t = "mezanino";
+        else if (t === "área técnica" || t === "area tecnica" || t === "tecnica") t = "tecnica";
+        else if (t === "cobertura") t = "cobertura";
+        else if (t === "tipo" || t === "andar tipo") t = "tipo";
+        else t = "outros";
+        
         if (!groups[t]) groups[t] = [];
         groups[t].push(p);
       });
