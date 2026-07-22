@@ -45,7 +45,7 @@ function PavimentoAmbientesView() {
   const selectedAmbiente = ambientes.data?.find(a => a.id === selectedAmbienteId);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] pb-24 sm:pb-0 overflow-hidden bg-muted/10">
+    <div className="flex flex-col h-[calc(100dvh-64px)] pb-24 sm:pb-0 overflow-hidden bg-muted/10">
       {/* Header */}
       <div className="flex-none p-4 bg-background border-b flex items-center justify-between z-10">
         <div className="flex items-center gap-3">
@@ -266,7 +266,7 @@ function AmbienteDetail({ ambiente, obraId }: { ambiente: Ambiente, obraId: stri
             </CardContent>
           </Card>
         ) : (
-          <div className="relative w-full h-[400px] lg:h-[500px] border rounded-lg overflow-hidden bg-background flex-none shadow-inner">
+          <div className="relative w-full h-[250px] md:h-[400px] lg:h-[500px] border rounded-lg overflow-hidden bg-background flex-none shadow-inner">
             {isAddingPin && (
               <div className="absolute top-2 left-2 z-10 bg-primary/90 text-primary-foreground px-3 py-1.5 rounded-full text-xs font-medium animate-pulse shadow-md flex items-center gap-2">
                 <MousePointer2 className="size-3" /> Clique no exato local do problema na planta
