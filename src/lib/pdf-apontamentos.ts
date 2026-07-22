@@ -3,7 +3,7 @@ import autoTable from "jspdf-autotable";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
-import { getPdfLogoBase64, fitImageInBox, getImageDimensions, getImageFormatFromDataUrl } from "@/lib/pdf-image-utils";
+import { getPdfLogoBase64, fitImageInBox, getImageDimensions, getImageFormatFromDataUrl, generateZoomCropBase64 } from "@/lib/pdf-image-utils";
 
 async function getImageUrl(path: string) {
   const { data } = supabase.storage.from("apontamentos").getPublicUrl(path);
@@ -175,22 +175,23 @@ export async function appendApontamentosToPdf(
     doc.text(regionName, 45, 40);
 
     // Draw Floor Plan Image
+    let plantaBase64: string | null = null;
     try {
       const url = await getImageUrl(ambiente.planta_storage_path!);
-      const base64 = await getBase64FromUrl(url);
-      const format = getImageFormatFromDataUrl(base64);
+      plantaBase64 = await getBase64FromUrl(url);
+      const format = getImageFormatFromDataUrl(plantaBase64);
       
       const imgW = 180;
       const imgH = 200;
       const startX = 15;
       const startY = 45;
       
-      const dims = await getImageDimensions(base64);
+      const dims = await getImageDimensions(plantaBase64);
       const fit = fitImageInBox(dims.width, dims.height, imgW, imgH);
       const finalX = startX + fit.offsetX;
       const finalY = startY + fit.offsetY;
 
-      doc.addImage(base64, format, finalX, finalY, fit.width, fit.height);
+      doc.addImage(plantaBase64, format, finalX, finalY, fit.width, fit.height);
 
       // Draw Pins
       pends.forEach((pend) => {
@@ -302,27 +303,63 @@ export async function appendApontamentosToPdf(
       doc.setFont("helvetica", "bold");
       doc.text(pend.empreiteira || "-", 30, nextLineY + 6);
 
-      // Right Column: Photo
+      // Right Column: Photos (Zoom, Defeito, Baixa)
+      let currentX = pageWidth - 15;
+      const photoW = 28;
+      const photoH = 20;
+
+      // 1. Baixa Photo (if resolved)
+      if (pend.foto_baixa_path) {
+        try {
+          const photoUrl = await getImageUrl(pend.foto_baixa_path);
+          const photoB64 = await getBase64FromUrl(photoUrl);
+          const format = getImageFormatFromDataUrl(photoB64);
+          currentX -= photoW;
+          doc.addImage(photoB64, format, currentX, listY - 2, photoW, photoH);
+          
+          doc.setFontSize(6); doc.setTextColor(34, 139, 34); doc.setFont("helvetica", "bold");
+          doc.text("PÓS (BAIXA)", currentX + (photoW/2), listY + 21, { align: "center" });
+          currentX -= 4; // gap
+        } catch(e) { console.error(e); }
+      }
+
+      // 2. Defect Photo
       if (pend.foto_path) {
         try {
           const photoUrl = await getImageUrl(pend.foto_path);
           const photoB64 = await getBase64FromUrl(photoUrl);
           const format = getImageFormatFromDataUrl(photoB64);
+          currentX -= photoW;
+          doc.addImage(photoB64, format, currentX, listY - 2, photoW, photoH);
           
-          const photoW = 45;
-          const photoH = 30;
-          doc.addImage(photoB64, format, pageWidth - 15 - photoW, listY - 2, photoW, photoH);
-
-          // Timestamp of photo
-          doc.setFontSize(6);
-          doc.setFont("helvetica", "normal");
-          doc.setTextColor(200, 0, 0);
-          doc.text(format(new Date(pend.created_at), "dd MMM yyyy HH:mm"), pageWidth - 16, listY + 27, { align: "right" });
-          
-        } catch (e) {
-          console.error("Failed to draw photo", e);
-        }
+          doc.setFontSize(6); doc.setTextColor(200, 0, 0); doc.setFont("helvetica", "bold");
+          doc.text("PRÉ (DEFEITO)", currentX + (photoW/2), listY + 21, { align: "center" });
+          currentX -= 4; // gap
+        } catch(e) { console.error(e); }
       }
+
+      // 3. Zoom Crop
+      if (plantaBase64 && pend.pos_x != null && pend.pos_y != null) {
+        try {
+          const cropB64 = await generateZoomCropBase64(plantaBase64, pend.pos_x, pend.pos_y, 4);
+          const format = getImageFormatFromDataUrl(cropB64);
+          currentX -= photoW;
+          doc.addImage(cropB64, format, currentX, listY - 2, photoW, photoH);
+          
+          doc.setFontSize(6); doc.setTextColor(100, 100, 100); doc.setFont("helvetica", "bold");
+          doc.text("ZOOM PLANTA", currentX + (photoW/2), listY + 21, { align: "center" });
+        } catch(e) { console.error(e); }
+      }
+      
+      // Timestamp of photo below the whole block
+      if (pend.foto_path) {
+        doc.setFontSize(6);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(150, 150, 150);
+        doc.text(format(new Date(pend.created_at), "dd MMM yyyy HH:mm"), pageWidth - 16, listY + 25, { align: "right" });
+      }
+          
+
       
       listY = nextLineY + 15;
     }

@@ -62,6 +62,7 @@ export function usePavimentos(torreId: string) {
   });
 }
 
+
 export function useAmbientes(pavimentoId: string) {
   return useQuery<Ambiente[]>({
     queryKey: ["ambientes", pavimentoId],
@@ -283,6 +284,23 @@ export function useCreatePavimento() {
     },
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ["pavimentos", variables.torre_id] });
+    },
+  });
+}
+
+export function useUpdatePavimento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...payload }: Partial<Pavimento> & { id: string }) => {
+      const { data, error } = await fromTable("obra_pavimentos").update(payload).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      if (data) {
+        qc.invalidateQueries({ queryKey: ["pavimentos", data.torre_id] });
+        qc.invalidateQueries({ queryKey: ["pavimento", data.id] });
+      }
     },
   });
 }
