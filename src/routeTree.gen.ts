@@ -17,7 +17,9 @@ import { Route as AuthenticatedObrasIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedObrasObraIdRouteImport } from './routes/_authenticated/obras.$obraId'
 import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated/admin.usuarios'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
+import { Route as AuthenticatedObrasObraIdTorresTorreIdRouteImport } from './routes/_authenticated/obras.$obraId.torres.$torreId'
 import { Route as AuthenticatedObrasObraIdRdosRdoIdRouteImport } from './routes/_authenticated/obras.$obraId.rdos.$rdoId'
+import { Route as AuthenticatedObrasObraIdTorresTorreIdPavimentosPavimentoIdRouteImport } from './routes/_authenticated/obras.$obraId.torres.$torreId.pavimentos.$pavimentoId'
 import { Route as AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRouteImport } from './routes/_authenticated/obras.$obraId.torres.$torreId.andares.$andarId'
 
 const AuthRoute = AuthRouteImport.update({
@@ -61,17 +63,29 @@ const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
   path: '/admin/audit',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedObrasObraIdTorresTorreIdRoute =
+  AuthenticatedObrasObraIdTorresTorreIdRouteImport.update({
+    id: '/torres/$torreId',
+    path: '/torres/$torreId',
+    getParentRoute: () => AuthenticatedObrasObraIdRoute,
+  } as any)
 const AuthenticatedObrasObraIdRdosRdoIdRoute =
   AuthenticatedObrasObraIdRdosRdoIdRouteImport.update({
     id: '/rdos/$rdoId',
     path: '/rdos/$rdoId',
     getParentRoute: () => AuthenticatedObrasObraIdRoute,
   } as any)
+const AuthenticatedObrasObraIdTorresTorreIdPavimentosPavimentoIdRoute =
+  AuthenticatedObrasObraIdTorresTorreIdPavimentosPavimentoIdRouteImport.update({
+    id: '/pavimentos/$pavimentoId',
+    path: '/pavimentos/$pavimentoId',
+    getParentRoute: () => AuthenticatedObrasObraIdTorresTorreIdRoute,
+  } as any)
 const AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute =
   AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRouteImport.update({
-    id: '/torres/$torreId/andares/$andarId',
-    path: '/torres/$torreId/andares/$andarId',
-    getParentRoute: () => AuthenticatedObrasObraIdRoute,
+    id: '/andares/$andarId',
+    path: '/andares/$andarId',
+    getParentRoute: () => AuthenticatedObrasObraIdTorresTorreIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -83,7 +97,9 @@ export interface FileRoutesByFullPath {
   '/obras/$obraId': typeof AuthenticatedObrasObraIdRouteWithChildren
   '/obras/': typeof AuthenticatedObrasIndexRoute
   '/obras/$obraId/rdos/$rdoId': typeof AuthenticatedObrasObraIdRdosRdoIdRoute
+  '/obras/$obraId/torres/$torreId': typeof AuthenticatedObrasObraIdTorresTorreIdRouteWithChildren
   '/obras/$obraId/torres/$torreId/andares/$andarId': typeof AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute
+  '/obras/$obraId/torres/$torreId/pavimentos/$pavimentoId': typeof AuthenticatedObrasObraIdTorresTorreIdPavimentosPavimentoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -94,7 +110,9 @@ export interface FileRoutesByTo {
   '/obras/$obraId': typeof AuthenticatedObrasObraIdRouteWithChildren
   '/obras': typeof AuthenticatedObrasIndexRoute
   '/obras/$obraId/rdos/$rdoId': typeof AuthenticatedObrasObraIdRdosRdoIdRoute
+  '/obras/$obraId/torres/$torreId': typeof AuthenticatedObrasObraIdTorresTorreIdRouteWithChildren
   '/obras/$obraId/torres/$torreId/andares/$andarId': typeof AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute
+  '/obras/$obraId/torres/$torreId/pavimentos/$pavimentoId': typeof AuthenticatedObrasObraIdTorresTorreIdPavimentosPavimentoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,7 +125,9 @@ export interface FileRoutesById {
   '/_authenticated/obras/$obraId': typeof AuthenticatedObrasObraIdRouteWithChildren
   '/_authenticated/obras/': typeof AuthenticatedObrasIndexRoute
   '/_authenticated/obras/$obraId/rdos/$rdoId': typeof AuthenticatedObrasObraIdRdosRdoIdRoute
+  '/_authenticated/obras/$obraId/torres/$torreId': typeof AuthenticatedObrasObraIdTorresTorreIdRouteWithChildren
   '/_authenticated/obras/$obraId/torres/$torreId/andares/$andarId': typeof AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute
+  '/_authenticated/obras/$obraId/torres/$torreId/pavimentos/$pavimentoId': typeof AuthenticatedObrasObraIdTorresTorreIdPavimentosPavimentoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -120,7 +140,9 @@ export interface FileRouteTypes {
     | '/obras/$obraId'
     | '/obras/'
     | '/obras/$obraId/rdos/$rdoId'
+    | '/obras/$obraId/torres/$torreId'
     | '/obras/$obraId/torres/$torreId/andares/$andarId'
+    | '/obras/$obraId/torres/$torreId/pavimentos/$pavimentoId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -131,7 +153,9 @@ export interface FileRouteTypes {
     | '/obras/$obraId'
     | '/obras'
     | '/obras/$obraId/rdos/$rdoId'
+    | '/obras/$obraId/torres/$torreId'
     | '/obras/$obraId/torres/$torreId/andares/$andarId'
+    | '/obras/$obraId/torres/$torreId/pavimentos/$pavimentoId'
   id:
     | '__root__'
     | '/'
@@ -143,7 +167,9 @@ export interface FileRouteTypes {
     | '/_authenticated/obras/$obraId'
     | '/_authenticated/obras/'
     | '/_authenticated/obras/$obraId/rdos/$rdoId'
+    | '/_authenticated/obras/$obraId/torres/$torreId'
     | '/_authenticated/obras/$obraId/torres/$torreId/andares/$andarId'
+    | '/_authenticated/obras/$obraId/torres/$torreId/pavimentos/$pavimentoId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -210,6 +236,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAuditRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/obras/$obraId/torres/$torreId': {
+      id: '/_authenticated/obras/$obraId/torres/$torreId'
+      path: '/torres/$torreId'
+      fullPath: '/obras/$obraId/torres/$torreId'
+      preLoaderRoute: typeof AuthenticatedObrasObraIdTorresTorreIdRouteImport
+      parentRoute: typeof AuthenticatedObrasObraIdRoute
+    }
     '/_authenticated/obras/$obraId/rdos/$rdoId': {
       id: '/_authenticated/obras/$obraId/rdos/$rdoId'
       path: '/rdos/$rdoId'
@@ -217,27 +250,52 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedObrasObraIdRdosRdoIdRouteImport
       parentRoute: typeof AuthenticatedObrasObraIdRoute
     }
+    '/_authenticated/obras/$obraId/torres/$torreId/pavimentos/$pavimentoId': {
+      id: '/_authenticated/obras/$obraId/torres/$torreId/pavimentos/$pavimentoId'
+      path: '/pavimentos/$pavimentoId'
+      fullPath: '/obras/$obraId/torres/$torreId/pavimentos/$pavimentoId'
+      preLoaderRoute: typeof AuthenticatedObrasObraIdTorresTorreIdPavimentosPavimentoIdRouteImport
+      parentRoute: typeof AuthenticatedObrasObraIdTorresTorreIdRoute
+    }
     '/_authenticated/obras/$obraId/torres/$torreId/andares/$andarId': {
       id: '/_authenticated/obras/$obraId/torres/$torreId/andares/$andarId'
-      path: '/torres/$torreId/andares/$andarId'
+      path: '/andares/$andarId'
       fullPath: '/obras/$obraId/torres/$torreId/andares/$andarId'
       preLoaderRoute: typeof AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRouteImport
-      parentRoute: typeof AuthenticatedObrasObraIdRoute
+      parentRoute: typeof AuthenticatedObrasObraIdTorresTorreIdRoute
     }
   }
 }
 
+interface AuthenticatedObrasObraIdTorresTorreIdRouteChildren {
+  AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute: typeof AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute
+  AuthenticatedObrasObraIdTorresTorreIdPavimentosPavimentoIdRoute: typeof AuthenticatedObrasObraIdTorresTorreIdPavimentosPavimentoIdRoute
+}
+
+const AuthenticatedObrasObraIdTorresTorreIdRouteChildren: AuthenticatedObrasObraIdTorresTorreIdRouteChildren =
+  {
+    AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute:
+      AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute,
+    AuthenticatedObrasObraIdTorresTorreIdPavimentosPavimentoIdRoute:
+      AuthenticatedObrasObraIdTorresTorreIdPavimentosPavimentoIdRoute,
+  }
+
+const AuthenticatedObrasObraIdTorresTorreIdRouteWithChildren =
+  AuthenticatedObrasObraIdTorresTorreIdRoute._addFileChildren(
+    AuthenticatedObrasObraIdTorresTorreIdRouteChildren,
+  )
+
 interface AuthenticatedObrasObraIdRouteChildren {
   AuthenticatedObrasObraIdRdosRdoIdRoute: typeof AuthenticatedObrasObraIdRdosRdoIdRoute
-  AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute: typeof AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute
+  AuthenticatedObrasObraIdTorresTorreIdRoute: typeof AuthenticatedObrasObraIdTorresTorreIdRouteWithChildren
 }
 
 const AuthenticatedObrasObraIdRouteChildren: AuthenticatedObrasObraIdRouteChildren =
   {
     AuthenticatedObrasObraIdRdosRdoIdRoute:
       AuthenticatedObrasObraIdRdosRdoIdRoute,
-    AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute:
-      AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute,
+    AuthenticatedObrasObraIdTorresTorreIdRoute:
+      AuthenticatedObrasObraIdTorresTorreIdRouteWithChildren,
   }
 
 const AuthenticatedObrasObraIdRouteWithChildren =

@@ -27,7 +27,6 @@ import { ObraAnalyticsTab } from "@/components/obra-analytics-tab";
 import { ObraFotografiaTab } from "@/components/obra-fotografia-tab";
 import { ObraEapTab } from "@/components/obra-eap-tab";
 import { ObraProjetosTab } from "@/components/obra-projetos-tab";
-import { TorreMapaView } from "@/components/apontamentos/torre-mapa-view";
 import { ObraMateriaisTab } from "@/components/obra-materiais-tab";
 import { ObraComissionamentoTab } from "@/components/obra-comissionamento-tab";
 import { ObraSesmtTab } from "@/components/obra-sesmt-tab";
@@ -38,6 +37,9 @@ import { ObraRncTab } from "@/components/obra-rnc-tab";
 import { ObraBmTab } from "@/components/obra-bm-tab";
 import { ObraMedicaoTab } from "@/components/obra-medicao-tab";
 import { useTutorial } from "@/hooks/use-tutorial";
+import { useVisaoGeral } from "@/hooks/use-5-passos";
+import { generateApontamentosPdf } from "@/lib/pdf-apontamentos";
+import { EstruturaObraDialog } from "@/components/apontamentos/estrutura-admin";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -61,7 +63,7 @@ import { OBRA_STATUS_LABEL } from "@/lib/labels";
 export const Route = createFileRoute("/_authenticated/obras/$obraId")({
   head: () => ({ meta: [{ title: "Obra — BRITO ENGENHARIA" }] }),
   validateSearch: (s: Record<string, unknown>): { tab: ObraTab } => ({
-    tab: (["visao", "analytics", "mapa", "rdo", "fotografia", "menu", "materiais", "laudos", "sesmt", "cronograma", "concretagem", "fvr", "rnc", "bm", "medicao"].includes(String(s.tab)) ? s.tab : "visao") as ObraTab,
+    tab: (["visao", "analytics", "rdo", "menu", "materiais", "laudos", "sesmt", "cronograma", "concretagem", "fvr", "rnc", "bm", "medicao"].includes(String(s.tab)) ? s.tab : "visao") as ObraTab,
   }),
   component: ObraDetail,
 });
@@ -86,6 +88,7 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const setStage = useTutorial((s) => s.setStage);
+  const [estruturaVisaoOpen, setEstruturaVisaoOpen] = useState(false);
 
   const obra = useQuery({
     queryKey: ["obra", obraId],
@@ -96,41 +99,8 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
     },
   });
 
-  /* Resumo de apontamentos */
-  const resumo = useQuery({
-    queryKey: ["obra-resumo-apontamentos", obraId],
-    queryFn: async () => {
-      const { data: torres, error: e1 } = await (supabase as any)
-        .from("obra_torres")
-        .select("id")
-        .eq("obra_id", obraId);
-      if (e1) throw e1;
-      if (!torres?.length) return { torres: 0, andares: 0, abertos: 0, resolvidos: 0 };
-
-      const torreIds = torres.map((t: any) => t.id);
-      const { data: andares, error: e2 } = await (supabase as any)
-        .from("torre_andares")
-        .select("id")
-        .in("torre_id", torreIds);
-      if (e2) throw e2;
-      if (!andares?.length) return { torres: torres.length, andares: 0, abertos: 0, resolvidos: 0 };
-
-      const andarIds = andares.map((a: any) => a.id);
-      const { data: aponts, error: e3 } = await (supabase as any)
-        .from("apontamentos")
-        .select("id, status")
-        .in("andar_id", andarIds);
-      if (e3) throw e3;
-
-      const all = aponts ?? [];
-      return {
-        torres: torres.length,
-        andares: andares.length,
-        abertos: all.filter((a: any) => a.status === "aberto").length,
-        resolvidos: all.filter((a: any) => a.status === "resolvido").length,
-      };
-    },
-  });
+  /* Resumo de apontamentos (Visão Geral - 5 Passos) */
+  const resumo = useVisaoGeral(obraId);
 
   /* Apontamentos recentes (últimos 5 abertos) */
   const recentes = useQuery({
@@ -218,27 +188,62 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
 
         {tab === "visao" && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {(
-                [
-                  ["Torres", resumo.data?.torres ?? 0, Building2],
-                  ["Andares", resumo.data?.andares ?? 0, Building2],
-                  ["Abertos", resumo.data?.abertos ?? 0, AlertCircle],
-                  ["Resolvidos", resumo.data?.resolvidos ?? 0, CheckCircle2],
-                ] as const
-              ).map(([label, n, Icon]) => (
+            <div className="space-y-3">
+              <div className="flex justify-between items-center px-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-sm text-muted-foreground">Resumo das Torres</span>
+                  {!isCliente && (
+                    <Button variant="outline" size="sm" className="h-6 text-xs px-2" onClick={() => setEstruturaVisaoOpen(true)}>
+                      <Settings className="size-3 mr-1" /> Configurar Estrutura
+                    </Button>
+                  )}
+                </div>
+                <div className="flex flex-col sm:flex-row items-center gap-2">
+                  <span className="font-medium text-sm text-muted-foreground">
+                    Total Obra: <span className="text-destructive">{resumo.data?.totalAbertos ?? 0} abertos</span> | <span className="text-success">{resumo.data?.totalResolvidos ?? 0} resolvidos</span>
+                  </span>
+                  <Button variant="default" size="sm" className="h-7 text-xs px-3" onClick={async () => {
+                    toast.loading("Gerando capa do PDF...", { id: "pdf-gen" });
+                    try {
+                      const blob = await generateApontamentosPdf(obraId, {}, "Issue Reporting");
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `Relatorio_${obra.data.nome}_${format(new Date(), "yyyyMMdd")}.pdf`;
+                      a.click();
+                      toast.success("PDF Gerado!", { id: "pdf-gen" });
+                    } catch (e: any) {
+                      toast.error("Erro ao gerar PDF: " + e.message, { id: "pdf-gen" });
+                    }
+                  }}>
+                    <FileDown className="size-3 mr-1" /> Gerar Relatório Técnico
+                  </Button>
+                </div>
+              </div>
+              {resumo.data?.torres?.map((t: any) => (
                 <Card 
-                  key={label} 
-                  className="text-center cursor-pointer hover:border-primary transition-colors"
-                  onClick={() => navigate({ search: { tab: "mapa" } as any, replace: true })}
+                  key={t.id} 
+                  className="cursor-pointer hover:border-primary transition-colors"
+                  onClick={() => navigate({ to: `/obras/${obraId}/torres/${t.id}` })}
                 >
-                  <CardContent className="py-3 px-2">
-                    <Icon className={`size-4 mx-auto mb-1 ${label === "Abertos" ? "text-destructive" : label === "Resolvidos" ? "text-success" : "text-muted-foreground"}`} />
-                    <div className="text-2xl font-bold">{n}</div>
-                    <div className="text-[0.65rem] sm:text-xs text-muted-foreground">{label}</div>
+                  <CardContent className="py-4 px-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Building2 className="size-5 text-muted-foreground" />
+                      <span className="font-semibold">{t.nome}</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-destructive font-medium">Aberto: {t.abertos}</span>
+                      <span className="mx-2 text-muted-foreground">|</span>
+                      <span className="text-success font-medium">Resolvido: {t.resolvidos}</span>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
+              {!resumo.data?.torres?.length && (
+                <div className="text-center py-6 text-sm text-muted-foreground border rounded-lg border-dashed">
+                  Nenhuma torre cadastrada.
+                </div>
+              )}
             </div>
 
             <Card>
@@ -345,209 +350,15 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
         {tab === "menu" && (
           <ObraMenuTab obraId={obraId} obra={obra.data} isAdmin={isAdmin} isCliente={isCliente} />
         )}
-
-        {tab === "fotografia" && (
-          <ObraFotografiaTab
-            obraId={obraId}
-            obraNome={obra.data.nome}
-            obraEndereco={obra.data.endereco}
-            editable={!isCliente}
-          />
-        )}
       </div>
 
       <div className="tour-obra-tabs">
         <ObraBottomNav obraId={obraId} active={tab} />
       </div>
-    </div>
-  );
-}
 
-/* ───────── Tab Mapa (lazy-loads TorreMapaView) ───────── */
-
-import { generateApontamentosPdf } from "@/lib/apontamentos-pdf-generator";
-
-function MapaTab({ obraId }: { obraId: string }) {
-  const torresQ = useQuery({
-    queryKey: ["obra-torres", obraId],
-    queryFn: async () => {
-      const { data: torres, error: e1 } = await (supabase as any)
-        .from("obra_torres")
-        .select("id, nome, ordem, obra_id")
-        .eq("obra_id", obraId)
-        .order("ordem");
-      if (e1) throw e1;
-      if (!torres?.length) return [];
-
-      const torreIds = torres.map((t: any) => t.id);
-
-      // Fetch andares with grupo join for tipo_andar and planta path
-      const { data: andares, error: e2 } = await (supabase as any)
-        .from("torre_andares")
-        .select("id, torre_id, grupo_id, numero_andar, apelido")
-        .in("torre_id", torreIds)
-        .order("numero_andar", { ascending: false });
-      if (e2) throw e2;
-
-      // Fetch grupos for tipo_andar
-      const grupoIds = [...new Set((andares ?? []).map((a: any) => a.grupo_id))];
-      let grupoMap = new Map<string, any>();
-      if (grupoIds.length) {
-        const { data: grupos } = await (supabase as any)
-          .from("torre_grupos_andar")
-          .select("id, tipo_andar, planta_storage_path")
-          .in("id", grupoIds);
-        grupoMap = new Map((grupos ?? []).map((g: any) => [g.id, g]));
-      }
-
-      return torres.map((t: any) => ({
-        ...t,
-        andares: (andares ?? [])
-          .filter((a: any) => a.torre_id === t.id)
-          .map((a: any) => {
-            const grupo = grupoMap.get(a.grupo_id);
-            return {
-              ...a,
-              tipo_andar: grupo?.tipo_andar ?? "tipo",
-              planta_storage_path: grupo?.planta_storage_path ?? null,
-            };
-          }),
-      }));
-    },
-  });
-
-  // Apontamento counts for indicator badges
-  const countsQ = useQuery({
-    queryKey: ["apontamento-counts", obraId],
-    enabled: !!torresQ.data?.length,
-    queryFn: async () => {
-      const allAndarIds = (torresQ.data ?? []).flatMap((t: any) => t.andares.map((a: any) => a.id));
-      if (!allAndarIds.length) return new Map<string, number>();
-
-      const { data, error } = await (supabase as any)
-        .from("apontamentos")
-        .select("id, andar_id")
-        .in("andar_id", allAndarIds)
-        .eq("status", "aberto");
-      if (error) throw error;
-
-      const map = new Map<string, number>();
-      for (const ap of data ?? []) {
-        map.set(ap.andar_id, (map.get(ap.andar_id) ?? 0) + 1);
-      }
-      return map;
-    },
-  });
-
-  const navigate = useNavigate();
-  const counts = countsQ.data ?? new Map<string, number>();
-
-  if (torresQ.isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (!torresQ.data?.length) {
-    return (
-      <Card>
-        <CardContent className="py-12 text-center space-y-3">
-          <MapPin className="size-10 mx-auto text-muted-foreground" />
-          <p className="text-muted-foreground">Nenhuma torre cadastrada.</p>
-          <p className="text-sm text-muted-foreground mb-4">Configure a estrutura da obra no Menu.</p>
-          <Button variant="outline" onClick={() => navigate({ search: { tab: "menu" } as any, replace: true })}>
-            <Settings className="size-4 mr-2" />
-            Estrutura da Obra
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const handleExportPdf = async () => {
-    try {
-      toast.info("Compilando dados das torres, aguarde...");
-      const { data: obraData } = await supabase.from("obras").select("nome, endereco").eq("id", obraId).single();
-      
-      const allAndarIds = torresQ.data.flatMap((t: any) => t.andares.map((a: any) => a.id));
-      const { data: apontamentos } = await (supabase as any)
-        .from("apontamentos")
-        .select("id, andar_id, pos_x, pos_y, descricao, status")
-        .in("andar_id", allAndarIds)
-        .order("created_at", { ascending: true });
-
-      const apontMap = new Map<string, any[]>();
-      for (const ap of apontamentos ?? []) {
-        if (!apontMap.has(ap.andar_id)) apontMap.set(ap.andar_id, []);
-        apontMap.get(ap.andar_id)!.push({
-          numero: apontMap.get(ap.andar_id)!.length + 1,
-          descricao: ap.descricao,
-          status: ap.status,
-          posX: ap.pos_x,
-          posY: ap.pos_y,
-        });
-      }
-
-      const torresData = [];
-      for (const torre of torresQ.data) {
-        const andaresData = [];
-        for (const andar of torre.andares) {
-          let plantaUrl = "";
-          if (andar.planta_storage_path) {
-            const { data: pUrl } = await supabase.storage.from("plantas-baixa").createSignedUrl(andar.planta_storage_path, 3600);
-            plantaUrl = pUrl?.signedUrl || "";
-          }
-          andaresData.push({
-            numero: andar.numero_andar,
-            apelido: andar.apelido,
-            tipoAndar: andar.tipo_andar,
-            torreNome: torre.nome,
-            plantaUrl,
-            apontamentos: apontMap.get(andar.id) ?? [],
-          });
-        }
-        torresData.push({ nome: torre.nome, andares: andaresData });
-      }
-
-      const pdfBlob = await generateApontamentosPdf({
-        obraNome: obraData?.nome || "Obra",
-        endereco: obraData?.endereco || undefined,
-        torres: torresData,
-      });
-
-      const url = URL.createObjectURL(pdfBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Mapa-Torres-${obraData?.nome || obraId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (e: any) {
-      toast.error(e.message);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold tracking-tight">Estrutura das Torres</h2>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => navigate({ search: { tab: "menu" } as any, replace: true })}>
-            <Settings className="size-4 mr-2 hidden sm:inline" />
-            Estrutura
-          </Button>
-          <Button size="sm" variant="outline" onClick={handleExportPdf}>
-            <FileDown className="size-4 mr-2 hidden sm:inline" />
-            PDF
-          </Button>
-        </div>
-      </div>
-      <div className="mt-4">
-        <TorreMapaView obraId={obraId} torres={torresQ.data} apontamentoCounts={counts} />
-      </div>
+      {estruturaVisaoOpen && (
+        <EstruturaObraDialog obraId={obraId} onClose={() => setEstruturaVisaoOpen(false)} />
+      )}
     </div>
   );
 }
@@ -663,9 +474,7 @@ function ObraMenuTab({
         </Dialog>
       )}
       {estruturaOpen && (
-        <Dialog open={estruturaOpen} onOpenChange={setEstruturaOpen}>
-          <EstruturaObraDialog obraId={obraId} onClose={() => setEstruturaOpen(false)} />
-        </Dialog>
+        <EstruturaObraDialog obraId={obraId} onClose={() => setEstruturaOpen(false)} />
       )}
       {docsOpen && (
         <Dialog open={docsOpen} onOpenChange={setDocsOpen}>
@@ -842,397 +651,6 @@ function EquipeDialog({ obraId }: { obraId: string }) {
           </label>
         ))}
       </div>
-    </DialogContent>
-  );
-}
-
-/* ───────── Dialog: Estrutura da Obra (Torres / Andares / Plantas) ───────── */
-
-function EstruturaObraDialog({ obraId, onClose }: { obraId: string; onClose: () => void }) {
-  const qc = useQueryClient();
-  const [torreNome, setTorreNome] = useState("");
-  const [grupoForm, setGrupoForm] = useState<{
-    torreId: string;
-    nomeGrupo: string;
-    andarInicial: string;
-    andarFinal: string;
-    tipoAndar: string;
-  } | null>(null);
-  
-  const [confirmTorreDelete, setConfirmTorreDelete] = useState<{ id: string; nome: string } | null>(null);
-  const [confirmPlantaDelete, setConfirmPlantaDelete] = useState<string | null>(null);
-
-  const torres = useQuery({
-    queryKey: ["obra-torres-estrutura", obraId],
-    queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("obra_torres")
-        .select("id, nome, ordem")
-        .eq("obra_id", obraId)
-        .order("ordem");
-      if (error) throw error;
-
-      const result = [];
-      for (const torre of data ?? []) {
-        const { data: grupos } = await (supabase as any)
-          .from("torre_grupos_andar")
-          .select("id, nome_grupo, andar_inicial, andar_final, tipo_andar, planta_storage_path")
-          .eq("torre_id", torre.id)
-          .order("andar_inicial");
-        result.push({ ...torre, grupos: grupos ?? [] });
-      }
-      return result;
-    },
-  });
-
-  const addTorre = useMutation({
-    mutationFn: async () => {
-      const ordem = (torres.data?.length ?? 0) + 1;
-      const { error } = await (supabase as any)
-        .from("obra_torres")
-        .insert({ obra_id: obraId, nome: torreNome.trim(), ordem });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      setTorreNome("");
-      toast.success("Torre adicionada.");
-      qc.invalidateQueries({ queryKey: ["obra-torres-estrutura", obraId] });
-      qc.invalidateQueries({ queryKey: ["obra-torres", obraId] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const addGrupo = useMutation({
-    mutationFn: async () => {
-      if (!grupoForm) return;
-      const { torreId, nomeGrupo, andarInicial, andarFinal, tipoAndar } = grupoForm;
-      const ini = parseInt(andarInicial);
-      const fim = parseInt(andarFinal);
-      if (isNaN(ini) || isNaN(fim) || ini > fim) throw new Error("Intervalo de andares inválido.");
-
-      // Create grupo
-      const { data: grupo, error: gErr } = await (supabase as any)
-        .from("torre_grupos_andar")
-        .insert({
-          torre_id: torreId,
-          nome_grupo: nomeGrupo.trim() || tipoAndar,
-          andar_inicial: ini,
-          andar_final: fim,
-          tipo_andar: tipoAndar,
-        })
-        .select("id")
-        .single();
-      if (gErr) throw gErr;
-
-      // Create individual andares
-      const andares = [];
-      for (let n = ini; n <= fim; n++) {
-        andares.push({
-          torre_id: torreId,
-          grupo_id: grupo.id,
-          numero_andar: n,
-          apelido: n === 0 ? "Térreo" : null,
-        });
-      }
-      const { error: aErr } = await (supabase as any).from("torre_andares").insert(andares);
-      if (aErr) throw aErr;
-    },
-    onSuccess: () => {
-      setGrupoForm(null);
-      toast.success("Andares adicionados.");
-      qc.invalidateQueries({ queryKey: ["obra-torres-estrutura", obraId] });
-      qc.invalidateQueries({ queryKey: ["obra-torres", obraId] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const delTorre = useMutation({
-    mutationFn: async (torreId: string) => {
-      const { error } = await (supabase as any).from("obra_torres").delete().eq("id", torreId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Torre removida.");
-      qc.invalidateQueries({ queryKey: ["obra-torres-estrutura", obraId] });
-      qc.invalidateQueries({ queryKey: ["obra-torres", obraId] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const handleRemovePlanta = async (grupoId: string) => {
-    try {
-      const { error: dbErr } = await (supabase as any)
-        .from("torre_grupos_andar")
-        .update({ planta_storage_path: null })
-        .eq("id", grupoId);
-      if (dbErr) throw dbErr;
-
-      toast.success("Planta removida.");
-      qc.invalidateQueries({ queryKey: ["obra-torres-estrutura", obraId] });
-      qc.invalidateQueries({ queryKey: ["obra-torres", obraId] });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao remover planta.");
-    }
-  };
-
-  const handlePlantaUpload = async (grupoId: string, torreId: string, file: File) => {
-    try {
-      const imageCompression = (await import("browser-image-compression")).default;
-      const compressed = await imageCompression(file, {
-        maxSizeMB: 1.2,
-        maxWidthOrHeight: 2400,
-        useWebWorker: true,
-      });
-      const path = `${obraId}/${torreId}/${grupoId}.${file.name.split(".").pop()}`;
-      const { error: upErr } = await supabase.storage.from("plantas-baixa").upload(path, compressed, { upsert: true });
-      if (upErr) throw upErr;
-
-      const { error: dbErr } = await (supabase as any)
-        .from("torre_grupos_andar")
-        .update({ planta_storage_path: path })
-        .eq("id", grupoId);
-      if (dbErr) throw dbErr;
-
-      toast.success("Planta enviada.");
-      qc.invalidateQueries({ queryKey: ["obra-torres-estrutura", obraId] });
-      qc.invalidateQueries({ queryKey: ["obra-torres", obraId] });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao enviar planta.");
-    }
-  };
-
-  return (
-    <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-      <DialogHeader>
-        <DialogTitle>Estrutura da obra</DialogTitle>
-      </DialogHeader>
-
-      <div className="space-y-4">
-        {/* Add torre */}
-        <div className="flex gap-2">
-          <Input
-            placeholder="Nome da torre (ex: Torre 1)"
-            value={torreNome}
-            onChange={(e) => setTorreNome(e.target.value)}
-            className="flex-1"
-          />
-          <Button type="button" onClick={() => addTorre.mutate()} disabled={!torreNome.trim() || addTorre.isPending}>
-            <Plus className="size-4" />
-          </Button>
-        </div>
-
-        {/* Torres list */}
-        {torres.isLoading ? (
-          <Loader2 className="size-5 animate-spin mx-auto" />
-        ) : (
-          torres.data?.map((torre: any) => (
-            <Card key={torre.id}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm">{torre.nome}</CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive h-7"
-                    onClick={() => setConfirmTorreDelete({ id: torre.id, nome: torre.nome })}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {torre.grupos.map((g: any) => (
-                  <div key={g.id} className="text-xs border rounded p-2 space-y-1.5">
-                    <div className="flex justify-between">
-                      <span className="font-medium">{g.nome_grupo}</span>
-                      <span className="text-[0.65rem] font-medium text-muted-foreground uppercase">{g.tipo_andar}</span>
-                    </div>
-                    <div className="text-muted-foreground">
-                      Andares {g.andar_inicial} a {g.andar_final}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {g.planta_storage_path ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-success text-[0.65rem] flex items-center gap-1">
-                            <CheckCircle2 className="size-3" />
-                            Planta enviada
-                          </span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            id={`planta-replace-${g.id}`}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) void handlePlantaUpload(g.id, torre.id, file);
-                            }}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-5 hover:text-primary"
-                            onClick={() => document.getElementById(`planta-replace-${g.id}`)?.click()}
-                            title="Substituir planta"
-                          >
-                            <Upload className="size-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-5 text-destructive hover:bg-destructive/10"
-                            onClick={() => setConfirmPlantaDelete(g.id)}
-                            title="Remover planta"
-                          >
-                            <Trash2 className="size-3" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            id={`planta-${g.id}`}
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) void handlePlantaUpload(g.id, torre.id, file);
-                            }}
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-6 text-[0.65rem]"
-                            onClick={() => document.getElementById(`planta-${g.id}`)?.click()}
-                          >
-                            Enviar planta
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                {grupoForm?.torreId === torre.id ? (
-                  <div className="border rounded p-3 bg-muted/20 space-y-3">
-                    <div className="text-xs text-muted-foreground pb-2 mb-2 border-b">
-                      <strong>Dica:</strong> Um "Grupo" representa andares que compartilham a <b>mesma planta-baixa</b>.
-                      Se a torre tem uma planta diferente por andar, crie um grupo para cada andar (ex: 1 a 1).
-                    </div>
-                    <Input
-                      placeholder="Nome do grupo (ex: Pavimentos Tipo)"
-                      value={grupoForm.nomeGrupo}
-                      onChange={(e) => setGrupoForm({ ...grupoForm, nomeGrupo: e.target.value })}
-                    />
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input
-                        type="number"
-                        placeholder="Andar inicial"
-                        value={grupoForm.andarInicial}
-                        onChange={(e) => setGrupoForm({ ...grupoForm, andarInicial: e.target.value })}
-                      />
-                      <Input
-                        type="number"
-                        placeholder="Andar final"
-                        value={grupoForm.andarFinal}
-                        onChange={(e) => setGrupoForm({ ...grupoForm, andarFinal: e.target.value })}
-                      />
-                    </div>
-                    <Select
-                      value={grupoForm.tipoAndar}
-                      onValueChange={(v) => setGrupoForm({ ...grupoForm, tipoAndar: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="garagem">Garagem / Subsolo</SelectItem>
-                        <SelectItem value="terreo">Térreo / Externo</SelectItem>
-                        <SelectItem value="mezanino">Mezanino / Pilotis / Comum</SelectItem>
-                        <SelectItem value="tipo">Andar Tipo</SelectItem>
-                        <SelectItem value="comercial">Comercial / Loja</SelectItem>
-                        <SelectItem value="tecnica">Área Técnica / Barrilete</SelectItem>
-                        <SelectItem value="subestacao">Subestação / Casa de Força</SelectItem>
-                        <SelectItem value="cobertura">Cobertura</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <div className="tour-obra-config flex gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => setGrupoForm(null)}>
-                        Cancelar
-                      </Button>
-                      <Button size="sm" onClick={() => addGrupo.mutate()} disabled={addGrupo.isPending}>
-                        Salvar
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() =>
-                      setGrupoForm({
-                        torreId: torre.id,
-                        nomeGrupo: "",
-                        andarInicial: "",
-                        andarFinal: "",
-                        tipoAndar: "tipo",
-                      })
-                    }
-                  >
-                    <Plus className="size-3.5" /> Adicionar andares
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
-
-      <AlertDialog open={!!confirmTorreDelete} onOpenChange={(open) => !open && setConfirmTorreDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remover torre?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Você está prestes a remover a <strong>{confirmTorreDelete?.nome}</strong>. Todos os andares vinculados a ela serão perdidos. Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-              onClick={() => {
-                if (confirmTorreDelete) delTorre.mutate(confirmTorreDelete.id);
-                setConfirmTorreDelete(null);
-              }}
-            >
-              Remover
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={!!confirmPlantaDelete} onOpenChange={(open) => !open && setConfirmPlantaDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remover planta do andar?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja remover a imagem da planta-baixa deste andar?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-              onClick={() => {
-                if (confirmPlantaDelete) handleRemovePlanta(confirmPlantaDelete);
-                setConfirmPlantaDelete(null);
-              }}
-            >
-              Remover
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </DialogContent>
   );
 }

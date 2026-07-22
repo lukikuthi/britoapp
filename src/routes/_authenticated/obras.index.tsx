@@ -234,8 +234,8 @@ function ObraDialog({ obra, onClose }: { obra: Obra | null; onClose: () => void 
         className="space-y-4"
       >
         <div className="space-y-2 tour-form-nome">
-          <Label>Nome *</Label>
-          <Input required value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+          <Label>Nome da Obra * (Padrão: Construtora - Nome da Obra)</Label>
+          <Input required placeholder="Ex: Diálogo - Álvaro Ramos" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
         </div>
         <div className="space-y-2">
           <Label>Endereço</Label>
