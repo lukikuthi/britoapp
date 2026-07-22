@@ -189,8 +189,8 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
         {tab === "visao" && (
           <div className="space-y-4">
             <div className="space-y-3">
-              <div className="flex justify-between items-center px-1">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center px-1 gap-4">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-sm text-muted-foreground">Resumo das Torres</span>
                   {!isCliente && (
                     <Button variant="outline" size="sm" className="h-6 text-xs px-2" onClick={() => setEstruturaVisaoOpen(true)}>
@@ -198,7 +198,7 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
                     </Button>
                   )}
                 </div>
-                <div className="flex flex-col sm:flex-row items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-sm text-muted-foreground">
                     Total Obra: <span className="text-destructive">{resumo.data?.totalAbertos ?? 0} abertos</span> | <span className="text-success">{resumo.data?.totalResolvidos ?? 0} resolvidos</span>
                   </span>
