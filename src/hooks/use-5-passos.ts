@@ -54,8 +54,7 @@ export function usePavimentos(torreId: string) {
     queryFn: async () => {
       const { data, error } = await fromTable("obra_pavimentos")
         .select("*")
-        .eq("torre_id", torreId)
-        .order("numero_andar", { ascending: true });
+        .eq("torre_id", torreId);
       if (error) throw error;
       return data;
     },
