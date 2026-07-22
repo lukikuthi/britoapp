@@ -1,12 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useRdo, useUpdateRdo, useClonePreviousRdo } from "@/hooks/use-rdo";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, FileDown, Loader2, Save } from "lucide-react";
 import { MaoObraSection, EquipamentosSection, AtividadesSection, ComentariosSection, OcorrenciasSection, ClimaSection } from "@/components/rdo-sections";
 import { RdoAssinaturaSection } from "@/components/rdo-assinatura-section";
 import { FvsSection } from "@/components/fvs-section";
-import { RdoPlantasSection } from "@/components/rdo-plantas";
-import { RdoFotografiasSection } from "@/components/rdo-fotografias";
 import { generateRdoPdf } from "@/lib/pdf-generator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -194,8 +193,6 @@ function RdoEditorPage() {
         <EquipamentosSection rdoId={rdoId} />
         <AtividadesSection rdoId={rdoId} />
         <OcorrenciasSection rdoId={rdoId} />
-        <RdoPlantasSection rdoId={rdoId} obraId={obraId} />
-        <RdoFotografiasSection rdoId={rdoId} obraId={obraId} />
         <FvsSection rdoId={rdoId} obraId={obraId} />
         <ComentariosSection rdoId={rdoId} />
         <RdoAssinaturaSection rdoId={rdoId} />

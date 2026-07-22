@@ -12,8 +12,6 @@ interface ObraBottomNavProps {
 const tabs: { id: ObraTab; label: string; icon: any; search: { tab: ObraTab } }[] = [
   { id: "visao", label: "Visão", icon: Activity, search: { tab: "visao" } },
   { id: "rdo", label: "RDO", icon: FileText, search: { tab: "rdo" } },
-  { id: "mapa", label: "Plantas", icon: MapPin, search: { tab: "mapa" } },
-  { id: "fotografia", label: "Fotos", icon: Camera, search: { tab: "fotografia" } },
   { id: "materiais", label: "Materiais", icon: Package, search: { tab: "materiais" } },
   { id: "laudos", label: "Laudos", icon: FileCheck, search: { tab: "laudos" } },
   { id: "sesmt", label: "SESMT", icon: HardHat, search: { tab: "sesmt" } },
