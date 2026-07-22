@@ -84,15 +84,18 @@ function PavimentoFormDialog({
   const createMut = useCreatePavimento();
   const updateMut = useUpdatePavimento();
   
+  const [isLote, setIsLote] = useState(false);
   const [numero, setNumero] = useState(pavimentoToEdit?.numero_andar?.toString() || "");
+  const [numeroFinal, setNumeroFinal] = useState("");
   const [tipo, setTipo] = useState(pavimentoToEdit?.tipo_pavimento || "tipo");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!numero || !tipo) return;
+    if (!tipo) return;
     
     try {
       if (pavimentoToEdit) {
+        if (!numero) return;
         await updateMut.mutateAsync({ 
           id: pavimentoToEdit.id, 
           numero_andar: parseInt(numero), 
@@ -100,16 +103,39 @@ function PavimentoFormDialog({
         });
         toast.success("Pavimento atualizado!");
       } else {
-        await createMut.mutateAsync({ 
-          torre_id: torreId, 
-          numero_andar: parseInt(numero), 
-          tipo_pavimento: tipo 
-        });
-        toast.success("Pavimento criado!");
+        if (isLote) {
+          if (!numero || !numeroFinal) return;
+          const start = parseInt(numero);
+          const end = parseInt(numeroFinal);
+          if (start > end) {
+            toast.error("O andar inicial deve ser menor ou igual ao final.");
+            return;
+          }
+          
+          toast.loading("Criando andares...", { id: "batch-create" });
+          const promises = [];
+          for (let i = start; i <= end; i++) {
+            promises.push(createMut.mutateAsync({ 
+              torre_id: torreId, 
+              numero_andar: i, 
+              tipo_pavimento: tipo 
+            }));
+          }
+          await Promise.all(promises);
+          toast.success(`${end - start + 1} andares criados!`, { id: "batch-create" });
+        } else {
+          if (!numero) return;
+          await createMut.mutateAsync({ 
+            torre_id: torreId, 
+            numero_andar: parseInt(numero), 
+            tipo_pavimento: tipo 
+          });
+          toast.success("Pavimento criado!");
+        }
       }
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.message, { id: "batch-create" });
     }
   };
 
@@ -120,10 +146,40 @@ function PavimentoFormDialog({
           <DialogTitle>{pavimentoToEdit ? "Editar Pavimento" : "Adicionar Pavimento"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Número do Andar (Ex: 1 para 1º Pav, -1 para Subsolo)</Label>
-            <Input type="number" value={numero} onChange={e => setNumero(e.target.value)} required />
-          </div>
+          
+          {!pavimentoToEdit && (
+            <div className="flex items-center space-x-2 pb-2">
+              <input 
+                type="checkbox" 
+                id="isLote" 
+                checked={isLote} 
+                onChange={e => setIsLote(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <Label htmlFor="isLote" className="text-sm font-medium">
+                Criar múltiplos andares (em lote)?
+              </Label>
+            </div>
+          )}
+
+          {isLote ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Andar Inicial</Label>
+                <Input type="number" value={numero} onChange={e => setNumero(e.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label>Andar Final</Label>
+                <Input type="number" value={numeroFinal} onChange={e => setNumeroFinal(e.target.value)} required />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label>Número do Andar (Ex: 1 para 1º Pav, -1 para Subsolo)</Label>
+              <Input type="number" value={numero} onChange={e => setNumero(e.target.value)} required />
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label>Tipo de Pavimento</Label>
             <Select value={tipo} onValueChange={setTipo}>
@@ -184,7 +240,7 @@ function TorrePavimentosView() {
   if (pavs.data) {
     [...pavs.data]
       // sort by numero_andar DESCENDING (top to bottom)
-      .sort((a, b) => b.numero_andar - a.numero_andar)
+      .sort((a, b) => (Number(b.numero_andar) || 0) - (Number(a.numero_andar) || 0))
       .forEach(p => {
         let t = (p.tipo_pavimento || "outros").toLowerCase().trim();
         // Mapear valores legados
@@ -233,7 +289,11 @@ function TorrePavimentosView() {
       </div>
 
       <div className="space-y-6">
-        {pavs.isLoading ? (
+        {pavs.isError ? (
+          <div className="text-center py-6 text-destructive border rounded-lg border-destructive/20 bg-destructive/10">
+            Erro ao carregar pavimentos: {pavs.error?.message}
+          </div>
+        ) : pavs.isLoading ? (
           <div className="text-center py-6 text-muted-foreground animate-pulse">Carregando pavimentos...</div>
         ) : pavs.data?.length === 0 ? (
           <div className="text-center py-6 text-sm text-muted-foreground border rounded-lg border-dashed">
