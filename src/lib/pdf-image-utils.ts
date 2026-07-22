@@ -103,3 +103,42 @@ export async function addPdfBrandedHeader(doc: import("jspdf").jsPDF, subtitle: 
 
   doc.setTextColor(0, 0, 0);
 }
+
+export async function generateZoomCropBase64(dataUrl: string, relX: number, relY: number, zoomFactor: number = 5): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const cropW = img.naturalWidth / zoomFactor;
+      const cropH = img.naturalHeight / zoomFactor;
+      
+      canvas.width = 400;
+      canvas.height = 400;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("No canvas context"));
+      
+      let sx = (img.naturalWidth * relX) - (cropW / 2);
+      let sy = (img.naturalHeight * relY) - (cropH / 2);
+      
+      if (sx < 0) sx = 0;
+      if (sy < 0) sy = 0;
+      if (sx + cropW > img.naturalWidth) sx = img.naturalWidth - cropW;
+      if (sy + cropH > img.naturalHeight) sy = img.naturalHeight - cropH;
+      
+      ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+      
+      const pinXOnCanvas = ((img.naturalWidth * relX) - sx) / cropW * canvas.width;
+      const pinYOnCanvas = ((img.naturalHeight * relY) - sy) / cropH * canvas.height;
+      
+      ctx.beginPath();
+      ctx.arc(pinXOnCanvas, pinYOnCanvas, 15, 0, 2 * Math.PI, false);
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = '#ef4444';
+      ctx.stroke();
+      
+      resolve(canvas.toDataURL("image/jpeg", 0.9));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}

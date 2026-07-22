@@ -739,85 +739,79 @@ function RdoTab({ obraId }: { obraId: string }) {
   const { data: rdos, isLoading } = useRdosDaObra(obraId);
   const createMut = useCreateRdo();
   const navigate = useNavigate();
+  
+  const [novoDialog, setNovoDialog] = useState(false);
+  const [tipoNovo, setTipoNovo] = useState<"diario"|"semanal">("diario");
+  const [dataRdo, setDataRdo] = useState(() => new Date().toISOString().split("T")[0]);
+  const [motivoAtraso, setMotivoAtraso] = useState("");
+
+  const todayStr = new Date().toISOString().split("T")[0];
+  const isAtrasado = dataRdo < todayStr && new Date().getHours() >= 17;
 
   const handleCreate = async () => {
     try {
-      const today = new Date().toISOString().split("T")[0];
-      const rdoExistente = rdos?.find((r) => r.data === today && (!r.tipo || r.tipo === "diario"));
-      
-      if (rdoExistente) {
-        toast.info("Você já possui um RDO Diário para a data de hoje. Abrindo RDO existente...");
-        navigate({ to: "/obras/$obraId/rdos/$rdoId", params: { obraId, rdoId: rdoExistente.id } });
-        return;
+      if (tipoNovo === "semanal") {
+        const rdoSemanalExistente = rdos?.find((r) => r.data === dataRdo && r.tipo === 'semanal');
+        if (rdoSemanalExistente) {
+          toast.info("Você já possui um RDO Semanal para esta data. Abrindo...");
+          navigate({ to: "/obras/$obraId/rdos/$rdoId", params: { obraId, rdoId: rdoSemanalExistente.id } });
+          return;
+        }
+      } else {
+        const rdoExistente = rdos?.find((r) => r.data === dataRdo && (!r.tipo || r.tipo === "diario"));
+        if (rdoExistente) {
+          toast.info("Você já possui um RDO Diário para esta data. Abrindo RDO existente...");
+          navigate({ to: "/obras/$obraId/rdos/$rdoId", params: { obraId, rdoId: rdoExistente.id } });
+          return;
+        }
       }
       
-      const rdo = await createMut.mutateAsync({ obra_id: obraId, data: today, tipo: "diario" });
+      const rdo = await createMut.mutateAsync({ obra_id: obraId, data: dataRdo, tipo: tipoNovo });
 
-      // Fetch Weather automatically
-      try {
-        const { data: obraData } = await supabase.from("obras").select("latitude, longitude").eq("id", obraId).single();
-        if (obraData && obraData.latitude && obraData.longitude) {
-          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${obraData.latitude}&longitude=${obraData.longitude}&daily=weathercode&timezone=America/Sao_Paulo`);
-          if (res.ok) {
-            const weatherData = await res.json();
-            const code = weatherData?.daily?.weathercode?.[0];
-            let climaStr = "Ensolarado";
-            if (code !== undefined) {
-              if (code >= 1 && code <= 3) climaStr = "Nublado";
-              if (code >= 51 && code <= 99) climaStr = "Chuvoso";
+      // If delayed, append to observacoes
+      if (isAtrasado && motivoAtraso.trim()) {
+        await supabase.from("rdos").update({
+          observacoes: `[ATRASADO] Motivo do atraso: ${motivoAtraso.trim()}`
+        }).eq("id", rdo.id);
+      }
+
+      // Fetch Weather automatically (only for diario makes sense, but we can try)
+      if (tipoNovo === "diario") {
+        try {
+          const { data: obraData } = await supabase.from("obras").select("latitude, longitude").eq("id", obraId).single();
+          if (obraData && obraData.latitude && obraData.longitude) {
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${obraData.latitude}&longitude=${obraData.longitude}&daily=weathercode&timezone=America/Sao_Paulo`);
+            if (res.ok) {
+              const weatherData = await res.json();
+              const code = weatherData?.daily?.weathercode?.[0];
+              let climaStr = "Ensolarado";
+              if (code !== undefined) {
+                if (code >= 1 && code <= 3) climaStr = "Nublado";
+                if (code >= 51 && code <= 99) climaStr = "Chuvoso";
+              }
+              await supabase.from("rdos").update({
+                condicao_tempo_manha: climaStr,
+                condicao_tempo_tarde: climaStr,
+              }).eq("id", rdo.id);
+              toast.success(`Clima automático detectado: ${climaStr}`);
             }
-            await supabase.from("rdos").update({
-              condicao_tempo_manha: climaStr,
-              condicao_tempo_tarde: climaStr,
-            }).eq("id", rdo.id);
-            toast.success(`Clima automático detectado: ${climaStr}`);
           }
+        } catch (weatherErr) {
+          console.error("Falha ao buscar clima automático:", weatherErr);
         }
-      } catch (weatherErr) {
-        console.error("Falha ao buscar clima automático:", weatherErr);
       }
 
       navigate({ to: "/obras/$obraId/rdos/$rdoId", params: { obraId, rdoId: rdo.id } });
     } catch (e: any) {
-      toast.error("Erro ao criar RDO: " + e.message);
+      toast.error(`Erro ao criar RDO ${tipoNovo}: ` + e.message);
     }
   };
 
-  const handleCreateSemanal = async () => {
-    try {
-      const today = new Date();
-      // Adjust to consider last monday
-      const day = today.getDay(); // 0=Sun, 1=Mon...
-      const monday = new Date(today);
-      monday.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
-      
-      const requiredDays = [];
-      for (let i = 0; i < 5; i++) { // Seg a Sex
-        const d = new Date(monday);
-        d.setDate(monday.getDate() + i);
-        requiredDays.push(d.toISOString().split("T")[0]);
-      }
-
-      const missing = requiredDays.filter(date => !rdos?.find(r => r.data === date && (!r.tipo || r.tipo === 'diario')));
-
-      if (missing.length > 0) {
-        toast.error(`Para gerar o RDO Semanal, você precisa preencher os RDOs diários de todos os dias úteis. Faltam: ${missing.map(d => format(new Date(d + "T12:00:00"), "dd/MM")).join(", ")}`);
-        return;
-      }
-
-      const friday = requiredDays[4];
-      const rdoSemanalExistente = rdos?.find((r) => r.data === friday && r.tipo === 'semanal');
-      if (rdoSemanalExistente) {
-        toast.info("Você já possui um RDO Semanal para esta semana. Abrindo...");
-        navigate({ to: "/obras/$obraId/rdos/$rdoId", params: { obraId, rdoId: rdoSemanalExistente.id } });
-        return;
-      }
-
-      const rdo = await createMut.mutateAsync({ obra_id: obraId, data: friday, tipo: "semanal" });
-      navigate({ to: "/obras/$obraId/rdos/$rdoId", params: { obraId, rdoId: rdo.id } });
-    } catch (e: any) {
-      toast.error("Erro ao criar RDO Semanal: " + e.message);
-    }
+  const openNew = (tipo: "diario"|"semanal") => {
+    setTipoNovo(tipo);
+    setDataRdo(todayStr);
+    setMotivoAtraso("");
+    setNovoDialog(true);
   };
 
   if (isLoading) {
@@ -825,52 +819,96 @@ function RdoTab({ obraId }: { obraId: string }) {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-2 gap-4">
-        <CardTitle className="text-base flex items-center gap-2">
-          <FileText className="size-4 text-primary shrink-0" />
-          Relatórios Diários de Obra
-        </CardTitle>
-        <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 scrollbar-hide snap-x">
-          <Button size="sm" variant="outline" className="shrink-0" onClick={handleCreateSemanal} disabled={createMut.isPending}>
-            Novo RDO Semanal
-          </Button>
-          <Button size="sm" className="shrink-0" onClick={handleCreate} disabled={createMut.isPending}>
-            <Plus className="size-4 mr-2" /> Novo RDO
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {!rdos?.length ? (
-          <p className="text-sm text-muted-foreground italic py-4 text-center">Nenhum RDO criado.</p>
-        ) : (
-          <ul className="divide-y">
-            {rdos.map((rdo) => (
-              <li key={rdo.id} className="py-3 flex items-center justify-between">
-                <div>
-                  <div className="font-medium text-sm flex items-center gap-2">
-                    RDO #{rdo.numero_sequencial}
-                    <div className="flex items-center gap-3">
-                      {rdo.tipo === "semanal" && (
-                        <span className="text-xs font-semibold text-primary">SEMANAL</span>
-                      )}
-                      <span className={`text-sm font-medium ${rdo.status === "aprovado" ? "text-success" : "text-muted-foreground"}`}>
-                        {rdo.status.toUpperCase()}
-                      </span>
+    <>
+      <Card>
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-2 gap-4">
+          <CardTitle className="text-base flex items-center gap-2">
+            <FileText className="size-4 text-primary shrink-0" />
+            Relatórios Diários de Obra
+          </CardTitle>
+          <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 scrollbar-hide snap-x">
+            <Button size="sm" variant="outline" className="shrink-0" onClick={() => openNew("semanal")}>
+              Novo RDO Semanal
+            </Button>
+            <Button size="sm" className="shrink-0" onClick={() => openNew("diario")}>
+              <Plus className="size-4 mr-2" /> Novo RDO Diário
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!rdos?.length ? (
+            <p className="text-sm text-muted-foreground italic py-4 text-center">Nenhum RDO criado.</p>
+          ) : (
+            <ul className="divide-y">
+              {rdos.map((rdo) => (
+                <li key={rdo.id} className="py-3 flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-sm flex items-center gap-2">
+                      RDO #{rdo.numero_sequencial}
+                      <div className="flex items-center gap-3">
+                        {rdo.tipo === "semanal" && (
+                          <span className="text-xs font-semibold text-primary">SEMANAL</span>
+                        )}
+                        <span className={`text-sm font-medium ${rdo.status === "aprovado" ? "text-success" : "text-muted-foreground"}`}>
+                          {rdo.status.toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {format(new Date(rdo.data), "dd/MM/yyyy")}
                     </div>
                   </div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    {format(new Date(rdo.data), "dd/MM/yyyy")}
-                  </div>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/obras/$obraId/rdos/$rdoId", params: { obraId, rdoId: rdo.id } })}>
-                  <ChevronLeft className="size-4 rotate-180" />
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+                  <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/obras/$obraId/rdos/$rdoId", params: { obraId, rdoId: rdo.id } })}>
+                    <ChevronLeft className="size-4 rotate-180" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={novoDialog} onOpenChange={setNovoDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo RDO {tipoNovo === "semanal" ? "Semanal" : "Diário"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Data do Relatório</Label>
+              <Input 
+                type="date" 
+                value={dataRdo} 
+                max={todayStr} 
+                onChange={e => setDataRdo(e.target.value)} 
+              />
+            </div>
+            
+            {isAtrasado && (
+              <div className="space-y-2 bg-destructive/10 p-3 rounded-md border border-destructive/20">
+                <Label className="text-destructive flex items-center gap-2">
+                  <AlertCircle className="size-4" /> RDO Atrasado
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Como este RDO está sendo criado após as 17:00 do dia seguinte, por favor justifique o motivo do atraso.
+                </p>
+                <Input 
+                  placeholder="Ex: Falta de internet na obra..." 
+                  value={motivoAtraso} 
+                  onChange={e => setMotivoAtraso(e.target.value)} 
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNovoDialog(false)}>Cancelar</Button>
+            <Button onClick={handleCreate} disabled={createMut.isPending || (isAtrasado && !motivoAtraso.trim())}>
+              {createMut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
+              Criar RDO
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
