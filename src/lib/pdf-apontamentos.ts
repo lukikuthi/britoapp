@@ -87,17 +87,17 @@ export async function appendApontamentosToPdf(
 
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text("General Information", 15, 45);
+  doc.text("Informações Gerais", 15, 45);
 
   autoTable(doc, {
     startY: 50,
     head: [],
     body: [
-      ["ProjectName", obraNome],
-      ["Contract No", "-"],
-      ["Program", "-"],
-      ["Division", "-"],
-      ["Region", "-"]
+      ["Nome do Projeto", obraNome],
+      ["Nº Contrato", "-"],
+      ["Programa", "-"],
+      ["Divisão", "-"],
+      ["Região", "-"]
     ],
     theme: 'plain',
     styles: { cellPadding: 3, fontSize: 10, lineColor: [200, 200, 200], lineWidth: 0.1 },
@@ -113,15 +113,15 @@ export async function appendApontamentosToPdf(
   
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text("Current Filters", 20, currentY + 8);
+  doc.text("Filtros Atuais", 20, currentY + 8);
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.text("Desenho: Todos os Pavimentos", 20, currentY + 16);
 
   doc.setFontSize(8);
   doc.setTextColor(150, 150, 150);
-  doc.text(`Created On: ${dateStr}`, 15, pageHeight - 15);
-  doc.text(`Created By: Sistema`, 15, pageHeight - 10);
+  doc.text(`Criado Em: ${dateStr}`, 15, pageHeight - 15);
+  doc.text(`Criado Por: Sistema`, 15, pageHeight - 10);
 
   // 2. Fetch Tree Data
   // To avoid deep nested select issues, let's fetch flat and group in JS.
@@ -163,12 +163,10 @@ export async function appendApontamentosToPdf(
         const fit = fitImageInBox(width, height, 30, 10);
         doc.addImage(logoUrl, "PNG", 15, 7, fit.width, fit.height);
     }
-    drawHeaderAndFooter(doc, obraNome, dateStr, pageNum, pageWidth, pageHeight);
-    
-    doc.setFontSize(9);
+    drawHeaderAndFooter(doc, obraNome, dateStr, pageNum, pageWidth, pageHeight);    doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
-    doc.text("Titulo Relatório:", 15, 35);
-    doc.text("Drawing Region:", 15, 40);
+    doc.text("Título Relatório:", 15, 35);
+    doc.text("Região da Planta:", 15, 40);
     
     doc.setTextColor(0, 0, 0);
     doc.text(nomeRelatorio, 45, 35);
@@ -295,15 +293,15 @@ export async function appendApontamentosToPdf(
       doc.setFillColor(isResolved ? 34 : 249, isResolved ? 197 : 115, isResolved ? 94 : 22); // Green or Orange
       doc.rect(120, nextLineY - 3, 20, 5, "F");
       doc.setTextColor(255, 255, 255);
-      doc.text(isResolved ? "Fixed" : "Open", 130, nextLineY + 0.5, { align: "center" });
+      doc.text(isResolved ? "Resolvida" : "Aberta", 130, nextLineY + 0.5, { align: "center" });
 
       doc.setTextColor(100, 100, 100);
-      doc.text("Con:", 15, nextLineY + 6);
+      doc.text("Empreiteira:", 15, nextLineY + 6);
       doc.setTextColor(0, 0, 0);
       doc.setFont("helvetica", "bold");
-      doc.text(pend.empreiteira || "-", 30, nextLineY + 6);
+      doc.text(pend.empreiteira || "-", 35, nextLineY + 6);
 
-      // Right Column: Photos (Zoom, Defeito, Baixa)
+      // Right Column: Photos (Defeito, Baixa) - Removed Zoom Crop
       let currentX = pageWidth - 15;
       const photoW = 28;
       const photoH = 20;
@@ -338,19 +336,6 @@ export async function appendApontamentosToPdf(
         } catch(e) { console.error(e); }
       }
 
-      // 3. Zoom Crop
-      if (plantaBase64 && pend.pos_x != null && pend.pos_y != null) {
-        try {
-          const cropB64 = await generateZoomCropBase64(plantaBase64, pend.pos_x, pend.pos_y, 4);
-          const format = getImageFormatFromDataUrl(cropB64);
-          currentX -= photoW;
-          doc.addImage(cropB64, format, currentX, listY - 2, photoW, photoH);
-          
-          doc.setFontSize(6); doc.setTextColor(100, 100, 100); doc.setFont("helvetica", "bold");
-          doc.text("ZOOM PLANTA", currentX + (photoW/2), listY + 21, { align: "center" });
-        } catch(e) { console.error(e); }
-      }
-      
       // Timestamp of photo below the whole block
       if (pend.foto_path) {
         doc.setFontSize(6);
@@ -359,7 +344,6 @@ export async function appendApontamentosToPdf(
         doc.text(format(new Date(pend.created_at), "dd MMM yyyy HH:mm"), pageWidth - 16, listY + 25, { align: "right" });
       }
           
-
       
       listY = nextLineY + 15;
     }
