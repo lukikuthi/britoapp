@@ -60,8 +60,9 @@ function RdoEditorPage() {
       const equipamentos = await fetchTable("rdo_equipamentos");
       const atividades = await fetchTable("rdo_atividades");
       const ocorrencias = await fetchTable("rdo_ocorrencias");
-      const clima = await fetchTable("rdo_clima");
+      const comentarios = await fetchTable("rdo_comentarios");
       const midias = await fetchTable("rdo_midias");
+      const assinatura = await fetchTable("rdo_assinatura");
       const andaresSelecionados = await fetchTable("rdo_andares_selecionados");
       
       // FVS and EAP (if available)
@@ -92,7 +93,8 @@ function RdoEditorPage() {
         equipamentos,
         atividades,
         ocorrencias,
-        clima,
+        comentarios,
+        assinatura,
         fvs: fvsData,
         midias: combinedMidias,
         andaresSelecionados
