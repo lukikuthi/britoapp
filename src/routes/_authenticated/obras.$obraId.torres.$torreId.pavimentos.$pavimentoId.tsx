@@ -475,7 +475,7 @@ function NovaPendenciaDialog({ open, setOpen, ambiente, initialCoords }: { open:
             </div>
             <div className="space-y-2">
               <Label>Empreiteira (Con:)</Label>
-              <Input placeholder="Ex: MCJ ELÉTRICA" value={empreiteira} onChange={e => setEmpreiteira(e.target.value)} />
+              <Input placeholder="Ex: BRITO" value={empreiteira} onChange={e => setEmpreiteira(e.target.value)} />
             </div>
           </div>
           
