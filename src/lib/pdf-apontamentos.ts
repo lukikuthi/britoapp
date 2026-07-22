@@ -46,6 +46,20 @@ export async function generateApontamentosPdf(
   nomeRelatorio: string
 ): Promise<Blob> {
   const doc = new jsPDF("p", "mm", "a4");
+  await appendApontamentosToPdf(doc, obraId, filtros, nomeRelatorio);
+  return doc.output("blob");
+}
+
+export async function appendApontamentosToPdf(
+  doc: jsPDF,
+  obraId: string, 
+  filtros: any, 
+  nomeRelatorio: string,
+  isAppending: boolean = false
+): Promise<void> {
+  if (isAppending) {
+    doc.addPage();
+  }
   const pageWidth = doc.internal.pageSize.width;
   const pageHeight = doc.internal.pageSize.height;
   const dateStr = format(new Date(), "dd/MM/yyyy HH:mm:ss");
@@ -313,6 +327,4 @@ export async function generateApontamentosPdf(
       listY = nextLineY + 15;
     }
   }
-
-  return doc.output("blob");
 }
