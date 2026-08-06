@@ -523,37 +523,53 @@ export function useReplicateAmbientes() {
 export function useCopyAmbientesToPavimento() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ origemPavId, destinoPavId }: { origemPavId: string; destinoPavId: string }) => {
+    mutationFn: async ({ origemPavId, destinosPavIds }: { origemPavId: string; destinosPavIds: string[] }) => {
       // 1. Buscar ambientes do pavimento de origem
       const { data: ambientesOrigem, error: e1 } = await supabase.from("obra_ambientes" as any).select("*").eq("pavimento_id", origemPavId);
       if (e1) throw e1;
       if (!ambientesOrigem || ambientesOrigem.length === 0) throw new Error("O pavimento de origem não tem ambientes para copiar.");
 
-      // 2. Verificar se destino já tem pendências nos ambientes existentes
-      const { data: existingAmbs } = await supabase.from("obra_ambientes" as any).select("id").eq("pavimento_id", destinoPavId);
-      const existingAmbIds = (existingAmbs || []).map((a: any) => a.id);
+      let copiedCount = 0;
+      const errors = [];
 
-      if (existingAmbIds.length > 0) {
-        const { data: pends } = await supabase.from("obra_pendencias" as any).select("id").in("ambiente_id", existingAmbIds);
-        if (pends && pends.length > 0) {
-          throw new Error("O pavimento de destino já possui pendências nos seus ambientes. Remova-as primeiro para poder sobrescrever.");
+      for (const destinoPavId of destinosPavIds) {
+        try {
+          // 2. Verificar se destino já tem pendências nos ambientes existentes
+          const { data: existingAmbs } = await supabase.from("obra_ambientes" as any).select("id").eq("pavimento_id", destinoPavId);
+          const existingAmbIds = (existingAmbs || []).map((a: any) => a.id);
+
+          if (existingAmbIds.length > 0) {
+            const { data: pends } = await supabase.from("obra_pendencias" as any).select("id").in("ambiente_id", existingAmbIds);
+            if (pends && pends.length > 0) {
+              errors.push("Alguns destinos já possuem pendências nos ambientes e foram ignorados.");
+              continue;
+            }
+            // Limpar ambientes existentes do destino (sem pendências)
+            await supabase.from("obra_ambientes" as any).delete().in("id", existingAmbIds);
+          }
+
+          // 3. Copiar ambientes da origem para o destino
+          const inserts = ambientesOrigem.map((amb: any) => ({
+            pavimento_id: destinoPavId,
+            nome: amb.nome,
+            numero_final: amb.numero_final,
+            planta_storage_path: amb.planta_storage_path,
+          }));
+
+          const { error: eIns } = await supabase.from("obra_ambientes" as any).insert(inserts);
+          if (eIns) throw eIns;
+
+          copiedCount++;
+        } catch (err: any) {
+          errors.push(err.message);
         }
-        // Limpar ambientes existentes do destino (sem pendências)
-        await supabase.from("obra_ambientes" as any).delete().in("id", existingAmbIds);
       }
 
-      // 3. Copiar ambientes da origem para o destino
-      const inserts = ambientesOrigem.map((amb: any) => ({
-        pavimento_id: destinoPavId,
-        nome: amb.nome,
-        numero_final: amb.numero_final,
-        planta_storage_path: amb.planta_storage_path,
-      }));
+      if (copiedCount === 0 && errors.length > 0) {
+        throw new Error(errors[0]);
+      }
 
-      const { error: eIns } = await supabase.from("obra_ambientes" as any).insert(inserts);
-      if (eIns) throw eIns;
-
-      return { count: inserts.length };
+      return { copiedCount, errors: [...new Set(errors)] };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ambientes"] });

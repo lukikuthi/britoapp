@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -64,7 +65,7 @@ function PavimentoCard({ obraId, torreId, p, onEdit, onDelete, onCopy, isAdmin }
                 variant="ghost" 
                 size="icon" 
                 className="h-8 w-8"
-                title="Copiar ambientes de outro pavimento"
+                title="Clonar ambientes para outros pavimentos"
                 onClick={(e) => { e.stopPropagation(); onCopy(p); }}
               >
                 <Copy className="size-4 text-muted-foreground" />
@@ -233,72 +234,100 @@ function PavimentoFormDialog({
   );
 }
 
-function CopyAmbientesDialog({
+function CloneAmbientesDialog({
   open,
   onOpenChange,
-  targetPavimento,
+  sourcePavimento,
   allPavimentos
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  targetPavimento: any;
+  sourcePavimento: any;
   allPavimentos: any[];
 }) {
-  const [selectedOrigemId, setSelectedOrigemId] = useState<string>("");
+  const [selectedDestinosIds, setSelectedDestinosIds] = useState<string[]>([]);
   const copyMut = useCopyAmbientesToPavimento();
 
-  const sourcePavimentos = allPavimentos.filter(p => p.id !== targetPavimento?.id);
+  const targetPavimentos = allPavimentos.filter(p => p.id !== sourcePavimento?.id);
+
+  const handleToggleAll = () => {
+    if (selectedDestinosIds.length === targetPavimentos.length) {
+      setSelectedDestinosIds([]);
+    } else {
+      setSelectedDestinosIds(targetPavimentos.map(p => p.id));
+    }
+  };
+
+  const handleToggle = (id: string) => {
+    setSelectedDestinosIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
 
   const handleCopy = async () => {
-    if (!selectedOrigemId || !targetPavimento) return;
+    if (selectedDestinosIds.length === 0 || !sourcePavimento) return;
     try {
       const result = await copyMut.mutateAsync({
-        origemPavId: selectedOrigemId,
-        destinoPavId: targetPavimento.id,
+        origemPavId: sourcePavimento.id,
+        destinosPavIds: selectedDestinosIds,
       });
-      toast.success(`${result.count} ambientes copiados com sucesso!`);
+      if (result.errors && result.errors.length > 0) {
+        toast.warning(`${result.copiedCount} pavimentos copiados com ressalvas: ${result.errors[0]}`);
+      } else {
+        toast.success(`${result.copiedCount} pavimentos clonados com sucesso!`);
+      }
       onOpenChange(false);
-      setSelectedOrigemId("");
+      setSelectedDestinosIds([]);
     } catch (err: any) {
       toast.error(err.message);
     }
   };
 
+  const allSelected = selectedDestinosIds.length > 0 && selectedDestinosIds.length === targetPavimentos.length;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            Copiar Ambientes para {targetPavimento?.numero_andar}º Pavimento
+            Clonar Ambientes do {sourcePavimento?.numero_andar}º Pavimento
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1 overflow-y-auto pr-2">
           <p className="text-sm text-muted-foreground">
-            Selecione o pavimento de <strong>origem</strong> para copiar todos os seus ambientes para o <strong>{targetPavimento?.numero_andar}º Pavimento ({targetPavimento?.tipo_pavimento})</strong>.
+            Selecione para quais pavimentos você deseja clonar os ambientes do <strong>{sourcePavimento?.numero_andar}º Pavimento ({sourcePavimento?.tipo_pavimento})</strong>.
           </p>
-          <div className="space-y-2">
-            <Label>Pavimento de Origem</Label>
-            <Select value={selectedOrigemId} onValueChange={setSelectedOrigemId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o pavimento de origem..." />
-              </SelectTrigger>
-              <SelectContent>
-                {sourcePavimentos.map(p => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.numero_andar}º Pav. — {p.tipo_pavimento}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          
+          <div className="flex items-center space-x-2 py-2">
+            <Checkbox id="select-all" checked={allSelected} onCheckedChange={handleToggleAll} />
+            <Label htmlFor="select-all" className="font-semibold cursor-pointer">
+              Selecionar todos os {targetPavimentos.length} pavimentos
+            </Label>
           </div>
+          
+          <div className="space-y-3 border rounded-md p-3 max-h-60 overflow-y-auto">
+            {targetPavimentos.map(p => (
+              <div key={p.id} className="flex items-center space-x-2">
+                <Checkbox 
+                  id={`target-${p.id}`} 
+                  checked={selectedDestinosIds.includes(p.id)}
+                  onCheckedChange={() => handleToggle(p.id)}
+                />
+                <Label htmlFor={`target-${p.id}`} className="cursor-pointer text-sm font-normal">
+                  {p.numero_andar}º Pavimento — {p.tipo_pavimento}
+                </Label>
+              </div>
+            ))}
+          </div>
+
           <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md p-3 text-xs text-amber-800 dark:text-amber-200">
-            ⚠️ Atenção: se o pavimento de destino já tiver ambientes <strong>sem pendências</strong>, eles serão substituídos. Ambientes com pendências bloqueiam a cópia.
+            ⚠️ Atenção: se o pavimento de destino já tiver ambientes <strong>sem pendências</strong>, eles serão substituídos. Pavimentos com ambientes que possuem pendências ativas serão ignorados por segurança.
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleCopy} disabled={!selectedOrigemId || copyMut.isPending}>
-            {copyMut.isPending ? "Copiando..." : "Copiar Ambientes"}
+          <Button onClick={handleCopy} disabled={selectedDestinosIds.length === 0 || copyMut.isPending}>
+            {copyMut.isPending ? "Clonando..." : `Clonar para ${selectedDestinosIds.length} destino(s)`}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -313,7 +342,7 @@ function TorrePavimentosView() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingPav, setEditingPav] = useState<any>(null);
   const [copyOpen, setCopyOpen] = useState(false);
-  const [copyTargetPav, setCopyTargetPav] = useState<any>(null);
+  const [copySourcePav, setCopySourcePav] = useState<any>(null);
   const [viewMode, setViewMode] = useState<"lista" | "categorias">("categorias");
   const deleteMut = useDeletePavimento();
   
@@ -353,8 +382,8 @@ function TorrePavimentosView() {
     }
   };
 
-  const handleCopy = (p: any) => {
-    setCopyTargetPav(p);
+  const handleCopy = (pav: any) => {
+    setCopySourcePav(pav);
     setCopyOpen(true);
   };
 
@@ -505,11 +534,11 @@ function TorrePavimentosView() {
         />
       )}
 
-      {copyOpen && copyTargetPav && (
-        <CopyAmbientesDialog
+      {copyOpen && copySourcePav && (
+        <CloneAmbientesDialog 
           open={copyOpen}
           onOpenChange={setCopyOpen}
-          targetPavimento={copyTargetPav}
+          sourcePavimento={copySourcePav}
           allPavimentos={pavs.data || []}
         />
       )}
