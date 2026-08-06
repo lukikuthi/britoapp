@@ -3,15 +3,17 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Layers, Plus, Pencil } from "lucide-react";
-import { usePavimentos, usePendenciasPavimentoCount, useCreatePavimento, useUpdatePavimento } from "@/hooks/use-5-passos";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { ChevronLeft, Layers, Plus, Pencil, Trash2, List, LayoutGrid, Copy } from "lucide-react";
+import { usePavimentos, usePendenciasPavimentoCount, useCreatePavimento, useUpdatePavimento, useDeletePavimento, useCopyAmbientesToPavimento } from "@/hooks/use-5-passos";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useRole } from "@/hooks/use-auth";
+import { useConfirmStore } from "@/components/confirm-dialog";
 
 export const Route = createFileRoute("/_authenticated/obras/$obraId/torres/$torreId")({
   component: TorreWrapper,
@@ -29,7 +31,7 @@ function TorreWrapper() {
   return <TorrePavimentosView />;
 }
 
-function PavimentoCard({ obraId, torreId, p, onEdit }: { obraId: string, torreId: string, p: any, onEdit: (p: any) => void }) {
+function PavimentoCard({ obraId, torreId, p, onEdit, onDelete, onCopy, isAdmin }: { obraId: string, torreId: string, p: any, onEdit: (p: any) => void, onDelete: (p: any) => void, onCopy: (p: any) => void, isAdmin: boolean }) {
   const counts = usePendenciasPavimentoCount(p.id);
   const navigate = useNavigate();
   
@@ -56,14 +58,37 @@ function PavimentoCard({ obraId, torreId, p, onEdit }: { obraId: string, torreId
             <span className="text-[0.65rem] text-muted-foreground">Resolv.</span>
           </div>
           
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={(e) => { e.stopPropagation(); onEdit(p); }}
-          >
-            <Pencil className="size-4 text-muted-foreground" />
-          </Button>
+          <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            {isAdmin && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8"
+                title="Copiar ambientes de outro pavimento"
+                onClick={(e) => { e.stopPropagation(); onCopy(p); }}
+              >
+                <Copy className="size-4 text-muted-foreground" />
+              </Button>
+            )}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={(e) => { e.stopPropagation(); onEdit(p); }}
+            >
+              <Pencil className="size-4 text-muted-foreground" />
+            </Button>
+            {isAdmin && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                onClick={(e) => { e.stopPropagation(); onDelete(p); }}
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -208,10 +233,89 @@ function PavimentoFormDialog({
   );
 }
 
+function CopyAmbientesDialog({
+  open,
+  onOpenChange,
+  targetPavimento,
+  allPavimentos
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  targetPavimento: any;
+  allPavimentos: any[];
+}) {
+  const [selectedOrigemId, setSelectedOrigemId] = useState<string>("");
+  const copyMut = useCopyAmbientesToPavimento();
+
+  const sourcePavimentos = allPavimentos.filter(p => p.id !== targetPavimento?.id);
+
+  const handleCopy = async () => {
+    if (!selectedOrigemId || !targetPavimento) return;
+    try {
+      const result = await copyMut.mutateAsync({
+        origemPavId: selectedOrigemId,
+        destinoPavId: targetPavimento.id,
+      });
+      toast.success(`${result.count} ambientes copiados com sucesso!`);
+      onOpenChange(false);
+      setSelectedOrigemId("");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            Copiar Ambientes para {targetPavimento?.numero_andar}º Pavimento
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Selecione o pavimento de <strong>origem</strong> para copiar todos os seus ambientes para o <strong>{targetPavimento?.numero_andar}º Pavimento ({targetPavimento?.tipo_pavimento})</strong>.
+          </p>
+          <div className="space-y-2">
+            <Label>Pavimento de Origem</Label>
+            <Select value={selectedOrigemId} onValueChange={setSelectedOrigemId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o pavimento de origem..." />
+              </SelectTrigger>
+              <SelectContent>
+                {sourcePavimentos.map(p => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.numero_andar}º Pav. — {p.tipo_pavimento}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md p-3 text-xs text-amber-800 dark:text-amber-200">
+            ⚠️ Atenção: se o pavimento de destino já tiver ambientes <strong>sem pendências</strong>, eles serão substituídos. Ambientes com pendências bloqueiam a cópia.
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={handleCopy} disabled={!selectedOrigemId || copyMut.isPending}>
+            {copyMut.isPending ? "Copiando..." : "Copiar Ambientes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function TorrePavimentosView() {
   const { obraId, torreId } = Route.useParams();
+  const { data: role } = useRole();
+  const isAdmin = role === "admin";
   const [formOpen, setFormOpen] = useState(false);
   const [editingPav, setEditingPav] = useState<any>(null);
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [copyTargetPav, setCopyTargetPav] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<"lista" | "categorias">("categorias");
+  const deleteMut = useDeletePavimento();
   
   const torre = useQuery({
     queryKey: ["torre", torreId],
@@ -235,12 +339,30 @@ function TorrePavimentosView() {
     setFormOpen(true);
   };
 
-  // Agrupar pavimentos por tipo
+  const handleDelete = async (p: any) => {
+    if (await useConfirmStore.getState().confirm(
+      `Remover o ${p.numero_andar}º Pavimento (${p.tipo_pavimento})? Todos os ambientes e pendências serão removidos. Esta ação não pode ser desfeita.`,
+      "Remover pavimento"
+    )) {
+      try {
+        await deleteMut.mutateAsync(p.id);
+        toast.success("Pavimento removido.");
+      } catch (err: any) {
+        toast.error(err.message);
+      }
+    }
+  };
+
+  const handleCopy = (p: any) => {
+    setCopyTargetPav(p);
+    setCopyOpen(true);
+  };
+
+  // Agrupar pavimentos por tipo (para vista de categorias)
   const groups: Record<string, any[]> = {};
   if (pavs.data) {
     [...pavs.data]
-      // sort by numero_andar DESCENDING (top to bottom)
-      .sort((a, b) => (Number(b.numero_andar) || 0) - (Number(a.numero_andar) || 0))
+      // sort by numero_andar DESCENDING (top to bottom) — already sorted from query
       .forEach(p => {
         let t = (p.tipo_pavimento || "outros").toLowerCase().trim();
         // Mapear valores legados
@@ -283,9 +405,32 @@ function TorrePavimentosView() {
           </Button>
           <h1 className="text-xl font-bold">{torre.data?.nome ?? "Carregando Torre..."}</h1>
         </div>
-        <Button size="sm" onClick={handleAddNew}>
-          <Plus className="size-4 mr-2" /> Novo Pavimento
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Toggle vista */}
+          <div className="flex items-center border rounded-lg overflow-hidden">
+            <Button
+              variant={viewMode === "lista" ? "default" : "ghost"}
+              size="sm"
+              className="rounded-none h-8 px-3"
+              onClick={() => setViewMode("lista")}
+              title="Lista numérica"
+            >
+              <List className="size-4" />
+            </Button>
+            <Button
+              variant={viewMode === "categorias" ? "default" : "ghost"}
+              size="sm"
+              className="rounded-none h-8 px-3"
+              onClick={() => setViewMode("categorias")}
+              title="Agrupar por categoria"
+            >
+              <LayoutGrid className="size-4" />
+            </Button>
+          </div>
+          <Button size="sm" onClick={handleAddNew}>
+            <Plus className="size-4 mr-2" /> Novo Pavimento
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -299,7 +444,24 @@ function TorrePavimentosView() {
           <div className="text-center py-6 text-sm text-muted-foreground border rounded-lg border-dashed">
             Nenhum pavimento cadastrado para esta torre. Clique em Novo Pavimento.
           </div>
+        ) : viewMode === "lista" ? (
+          /* ===== VISTA LISTA NUMÉRICA ===== */
+          <div className="flex flex-col gap-3">
+            {pavs.data?.map(p => (
+              <PavimentoCard 
+                key={p.id} 
+                obraId={obraId} 
+                torreId={torreId} 
+                p={p} 
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onCopy={handleCopy}
+                isAdmin={isAdmin}
+              />
+            ))}
+          </div>
         ) : (
+          /* ===== VISTA CATEGORIAS ===== */
           <div className="flex flex-col gap-6">
             {groupOrder.map(tipo => {
               const pavList = groups[tipo];
@@ -320,7 +482,10 @@ function TorrePavimentosView() {
                         obraId={obraId} 
                         torreId={torreId} 
                         p={p} 
-                        onEdit={handleEdit} 
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        onCopy={handleCopy}
+                        isAdmin={isAdmin}
                       />
                     ))}
                   </div>
@@ -337,6 +502,15 @@ function TorrePavimentosView() {
           onOpenChange={setFormOpen} 
           torreId={torreId} 
           pavimentoToEdit={editingPav} 
+        />
+      )}
+
+      {copyOpen && copyTargetPav && (
+        <CopyAmbientesDialog
+          open={copyOpen}
+          onOpenChange={setCopyOpen}
+          targetPavimento={copyTargetPav}
+          allPavimentos={pavs.data || []}
         />
       )}
     </div>

@@ -66,14 +66,24 @@ function AuthenticatedLayout() {
   return (
     <div 
       className="min-h-screen flex bg-background transition-all duration-300" 
-      style={{ "--sidebar-width": sidebarCollapsed ? "0px" : "256px" } as React.CSSProperties}
+      style={{ "--sidebar-width": sidebarCollapsed ? "80px" : "256px" } as React.CSSProperties}
     >
       {/* Sidebar desktop */}
-      {!sidebarCollapsed && (
-        <aside className="hidden md:flex md:w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border shrink-0 transition-all duration-300">
-        <div className="p-4 border-b border-sidebar-border">
-          <BritoLogo size="sm" />
+      <aside className={cn(
+        "hidden md:flex flex-col bg-sidebar text-sidebar-foreground shrink-0 transition-all duration-300 overflow-hidden",
+        sidebarCollapsed ? "w-20" : "w-64"
+      )}>
+        <div className={cn(
+          "border-b border-sidebar-border bg-white flex items-center h-[97px] py-2",
+          sidebarCollapsed ? "px-2 justify-center" : "px-6 justify-start"
+        )}>
+          <BritoLogo 
+            iconOnly={sidebarCollapsed} 
+            size="xl" 
+            className="h-full max-h-[75px] w-auto object-contain" 
+          />
         </div>
+        <div className="flex-1 flex flex-col border-r border-sidebar-border">
         <nav className="flex-1 p-3 space-y-1">
           {nav.map((item) => {
             const active = location.pathname === item.to || location.pathname.startsWith(item.to + "/");
@@ -82,48 +92,56 @@ function AuthenticatedLayout() {
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-all duration-300",
+                  "flex items-center rounded-md px-3 py-2 text-sm transition-all duration-300",
+                  sidebarCollapsed ? "justify-center" : "gap-3",
                   active
                     ? "bg-gradient-to-b from-sidebar-primary/95 to-sidebar-primary text-sidebar-primary-foreground shadow-[inset_0_1px_1px_rgba(255,255,255,0.15),_0_2px_4px_rgba(0,0,0,0.2)]"
                     : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 )}
+                title={sidebarCollapsed ? item.label : undefined}
               >
-                <item.icon className="size-4" />
-                {item.label}
+                <item.icon className="size-5 shrink-0" />
+                {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
               </Link>
             );
           })}
         </nav>
         <div className="p-3 border-t border-sidebar-border space-y-2">
-          <div className="px-3 text-xs">
-            <div className="font-medium truncate">{profile?.nome || user.email}</div>
-            <div className="text-sidebar-foreground/60 uppercase tracking-wider text-[0.65rem]">
-              {role ?? "—"}
+          {!sidebarCollapsed && (
+            <div className="px-3 text-xs">
+              <div className="font-medium truncate">{profile?.nome || user.email}</div>
+              <div className="text-sidebar-foreground/60 uppercase tracking-wider text-[0.65rem]">
+                {role ?? "—"}
+              </div>
             </div>
-          </div>
-          <div className="flex gap-2">
+          )}
+          <div className={cn("flex", sidebarCollapsed ? "flex-col items-center gap-2" : "gap-2")}>
             <Button
               variant="ghost"
-              size="sm"
+              size={sidebarCollapsed ? "icon" : "sm"}
               onClick={() => setDark((d) => !d)}
               className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex-none"
               title="Alternar tema"
             >
-              {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+              {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
             </Button>
             <Button
               variant="ghost"
-              size="sm"
+              size={sidebarCollapsed ? "icon" : "sm"}
               onClick={handleLogout}
-              className="flex-1 justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              className={cn(
+                "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                sidebarCollapsed ? "justify-center" : "flex-1 justify-start"
+              )}
+              title={sidebarCollapsed ? "Sair" : undefined}
             >
-              <LogOut className="size-4 mr-2" />
-              Sair
+              <LogOut className={cn("size-5", !sidebarCollapsed && "mr-2")} />
+              {!sidebarCollapsed && "Sair"}
             </Button>
           </div>
         </div>
+        </div>
       </aside>
-      )}
 
       {/* Mobile drawer */}
       {open && (
@@ -132,9 +150,9 @@ function AuthenticatedLayout() {
             className="absolute left-0 top-0 bottom-0 w-72 bg-sidebar text-sidebar-foreground flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
-              <BritoLogo size="sm" />
-              <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="text-sidebar-foreground">
+            <div className="py-2 px-6 border-b border-sidebar-border bg-white flex items-center justify-between h-[97px]">
+              <BritoLogo size="xl" className="h-full max-h-[75px] w-auto object-contain" />
+              <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="text-slate-900 hover:bg-slate-100">
                 <X className="size-5" />
               </Button>
             </div>

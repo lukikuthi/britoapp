@@ -29,7 +29,7 @@ function drawHeaderAndFooter(doc: jsPDF, obraNome: string, dateStr: string, page
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
   doc.setTextColor(0, 43, 91);
-  doc.text("Relatório Site com Desenhos", 50, 12);
+  doc.text("Relatório", 50, 12);
   doc.setFont("helvetica", "normal");
   doc.text(obraNome, 50, 18);
 
@@ -72,14 +72,14 @@ export async function appendApontamentosToPdf(
   const logoUrl = await getPdfLogoBase64();
   if (logoUrl) {
     const { width, height } = await getImageDimensions(logoUrl);
-    const fit = fitImageInBox(width, height, 40, 15);
+    const fit = fitImageInBox(width, height, 60, 20);
     doc.addImage(logoUrl, "PNG", 15, 10, fit.width, fit.height);
   }
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(24);
   doc.setTextColor(0, 0, 0);
-  doc.text("Issue Reporting", pageWidth - 15, 20, { align: "right" });
+  doc.text("Relatório", pageWidth - 15, 20, { align: "right" });
   
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
@@ -93,11 +93,7 @@ export async function appendApontamentosToPdf(
     startY: 50,
     head: [],
     body: [
-      ["Nome do Projeto", obraNome],
-      ["Nº Contrato", "-"],
-      ["Programa", "-"],
-      ["Divisão", "-"],
-      ["Região", "-"]
+      ["Nome do Projeto", obraNome]
     ],
     theme: 'plain',
     styles: { cellPadding: 3, fontSize: 10, lineColor: [200, 200, 200], lineWidth: 0.1 },
@@ -158,12 +154,13 @@ export async function appendApontamentosToPdf(
     // --- Page: Planta ---
     doc.addPage();
     let pageNum = 1;
+    drawHeaderAndFooter(doc, obraNome, dateStr, pageNum, pageWidth, pageHeight);
     if (logoUrl) {
         const { width, height } = await getImageDimensions(logoUrl);
-        const fit = fitImageInBox(width, height, 30, 10);
-        doc.addImage(logoUrl, "PNG", 15, 7, fit.width, fit.height);
+        const fit = fitImageInBox(width, height, 45, 15);
+        doc.addImage(logoUrl, "PNG", 15, 5, fit.width, fit.height);
     }
-    drawHeaderAndFooter(doc, obraNome, dateStr, pageNum, pageWidth, pageHeight);    doc.setFontSize(9);
+    doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
     doc.text("Título Relatório:", 15, 35);
     doc.text("Região da Planta:", 15, 40);
@@ -222,24 +219,24 @@ export async function appendApontamentosToPdf(
     // --- Pages: Detalhes ---
     doc.addPage();
     pageNum++;
+    drawHeaderAndFooter(doc, obraNome, dateStr, pageNum, pageWidth, pageHeight);
     if (logoUrl) {
         const { width, height } = await getImageDimensions(logoUrl);
         const fit = fitImageInBox(width, height, 30, 10);
         doc.addImage(logoUrl, "PNG", 15, 7, fit.width, fit.height);
     }
-    drawHeaderAndFooter(doc, obraNome, dateStr, pageNum, pageWidth, pageHeight);
 
     let listY = 35;
     for (const pend of pends) {
       if (listY > pageHeight - 60) {
         doc.addPage();
         pageNum++;
+        drawHeaderAndFooter(doc, obraNome, dateStr, pageNum, pageWidth, pageHeight);
         if (logoUrl) {
             const { width, height } = await getImageDimensions(logoUrl);
             const fit = fitImageInBox(width, height, 30, 10);
             doc.addImage(logoUrl, "PNG", 15, 7, fit.width, fit.height);
         }
-        drawHeaderAndFooter(doc, obraNome, dateStr, pageNum, pageWidth, pageHeight);
         listY = 35;
       }
 
@@ -255,6 +252,15 @@ export async function appendApontamentosToPdf(
       doc.setFont("helvetica", "normal");
       doc.text(`Ambiente: ${ambiente.nome}`, 30, listY);
 
+      // Status Badge
+      const isResolved = pend.status === 'resolvida';
+      doc.setFillColor(isResolved ? 34 : 249, isResolved ? 197 : 115, isResolved ? 94 : 22); // Green or Orange
+      doc.rect(118, listY - 3, 24, 5, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.text(isResolved ? "Resolvida" : "Aberta", 130, listY + 0.5, { align: "center" });
+      doc.setFontSize(10);
+
       doc.setFontSize(9);
       doc.setTextColor(100, 100, 100);
       doc.text(pend.categoria_taxonomia || "Categoria não definida", 30, listY + 5);
@@ -264,6 +270,18 @@ export async function appendApontamentosToPdf(
       doc.text(splitDesc, 30, listY + 11);
       
       let nextLineY = listY + 11 + (splitDesc.length * 4);
+
+      if (nextLineY > pageHeight - 60) {
+        doc.addPage();
+        pageNum++;
+        drawHeaderAndFooter(doc, obraNome, dateStr, pageNum, pageWidth, pageHeight);
+        if (logoUrl) {
+            const { width, height } = await getImageDimensions(logoUrl);
+            const fit = fitImageInBox(width, height, 30, 10);
+            doc.addImage(logoUrl, "PNG", 15, 7, fit.width, fit.height);
+        }
+        nextLineY = 35;
+      }
 
       if (pend.pos_x != null && pend.pos_y != null) {
         doc.setFontSize(8);
@@ -279,21 +297,14 @@ export async function appendApontamentosToPdf(
       doc.setFontSize(8);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(100, 100, 100);
-      doc.text("Realizado:", 15, nextLineY);
+      doc.text("Prazo:", 15, nextLineY);
       doc.setTextColor(0, 0, 0);
-      doc.text(format(prazoDate, "EEE, dd MMM yyyy", { locale: ptBR }), 30, nextLineY);
+      doc.text(format(prazoDate, "dd/MM/yyyy"), 30, nextLineY);
 
       doc.setTextColor(100, 100, 100);
       doc.text("Dias restantes:", 80, nextLineY);
       doc.setTextColor(diasRestantes < 0 ? 255 : 100, diasRestantes < 0 ? 0 : 100, diasRestantes < 0 ? 0 : 100);
       doc.text(diasRestantes.toString(), 105, nextLineY);
-
-      // Status Badge
-      const isResolved = pend.status === 'resolvida';
-      doc.setFillColor(isResolved ? 34 : 249, isResolved ? 197 : 115, isResolved ? 94 : 22); // Green or Orange
-      doc.rect(120, nextLineY - 3, 20, 5, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.text(isResolved ? "Resolvida" : "Aberta", 130, nextLineY + 0.5, { align: "center" });
 
       doc.setTextColor(100, 100, 100);
       doc.text("Empreiteira:", 15, nextLineY + 6);
@@ -341,7 +352,7 @@ export async function appendApontamentosToPdf(
         doc.setFontSize(6);
         doc.setFont("helvetica", "normal");
         doc.setTextColor(150, 150, 150);
-        doc.text(format(new Date(pend.created_at), "dd MMM yyyy HH:mm"), pageWidth - 16, listY + 25, { align: "right" });
+        doc.text(format(new Date(pend.created_at), "dd/MM/yyyy HH:mm"), pageWidth - 16, nextLineY, { align: "right" });
       }
           
       

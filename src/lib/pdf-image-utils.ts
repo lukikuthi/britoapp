@@ -12,9 +12,9 @@ export async function fetchImageAsBase64(url: string): Promise<string> {
   });
 }
 
-export function getImageFormatFromDataUrl(dataUrl: string): "JPEG" | "PNG" | "WEBP" {
+export function getImageFormatFromDataUrl(dataUrl: string): "JPEG" | "PNG" {
   if (dataUrl.startsWith("data:image/png")) return "PNG";
-  if (dataUrl.startsWith("data:image/webp")) return "WEBP";
+  if (dataUrl.startsWith("data:image/webp")) return "PNG";
   return "JPEG";
 }
 
@@ -76,7 +76,8 @@ export async function getPdfLogoBase64(): Promise<string | null> {
 
 export async function addPdfBrandedHeader(doc: import("jspdf").jsPDF, subtitle: string): Promise<void> {
   doc.setFillColor(0, 43, 91);
-  doc.rect(0, 0, 210, 25, "F");
+  const pageWidth = doc.internal.pageSize.getWidth();
+  doc.rect(0, 0, pageWidth, 25, "F");
 
   const logo = await getPdfLogoBase64();
   if (logo) {
@@ -109,8 +110,11 @@ export async function generateZoomCropBase64(dataUrl: string, relX: number, relY
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      const cropW = img.naturalWidth / zoomFactor;
-      const cropH = img.naturalHeight / zoomFactor;
+      let cropW = img.naturalWidth / zoomFactor;
+      let cropH = img.naturalHeight / zoomFactor;
+      
+      if (cropW > img.naturalWidth) cropW = img.naturalWidth;
+      if (cropH > img.naturalHeight) cropH = img.naturalHeight;
       
       canvas.width = 400;
       canvas.height = 400;

@@ -54,7 +54,8 @@ export function usePavimentos(torreId: string) {
     queryFn: async () => {
       const { data, error } = await fromTable("obra_pavimentos")
         .select("*")
-        .eq("torre_id", torreId);
+        .eq("torre_id", torreId)
+        .order("numero_andar", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -344,6 +345,22 @@ export function useDeleteAmbiente() {
   });
 }
 
+export function useUpdateAmbiente() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...payload }: { id: string; nome?: string; numero_final?: number | null }) => {
+      const { data, error } = await fromTable("obra_ambientes").update(payload).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      if (data) {
+        qc.invalidateQueries({ queryKey: ["ambientes", data.pavimento_id] });
+      }
+    },
+  });
+}
+
 export function useUploadPlantaAmbiente() {
   const qc = useQueryClient();
   return useMutation({
@@ -413,6 +430,39 @@ export function useResolvePendencia() {
   });
 }
 
+export function useDeletePendencia() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ambiente_id }: { id: string; ambiente_id: string }) => {
+      const { error } = await fromTable("obra_pendencias").delete().eq("id", id);
+      if (error) throw error;
+      return { ambiente_id };
+    },
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ["pendencias", variables.ambiente_id] });
+      qc.invalidateQueries({ queryKey: ["pendencias-ambiente-count"] });
+      qc.invalidateQueries({ queryKey: ["pendencias-pavimento-count"] });
+      qc.invalidateQueries({ queryKey: ["pendencias-torre-count"] });
+    },
+  });
+}
+
+export function useUpdatePendencia() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...payload }: { id: string; descricao?: string; empreiteira?: string | null; categoria_taxonomia?: string | null }) => {
+      const { data, error } = await fromTable("obra_pendencias").update(payload).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      if (data) {
+        qc.invalidateQueries({ queryKey: ["pendencias", data.ambiente_id] });
+      }
+    },
+  });
+}
+
 export function useReplicateAmbientes() {
   const qc = useQueryClient();
   return useMutation({
@@ -467,5 +517,46 @@ export function useReplicateAmbientes() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["ambientes"] });
     }
+  });
+}
+
+export function useCopyAmbientesToPavimento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ origemPavId, destinoPavId }: { origemPavId: string; destinoPavId: string }) => {
+      // 1. Buscar ambientes do pavimento de origem
+      const { data: ambientesOrigem, error: e1 } = await supabase.from("obra_ambientes" as any).select("*").eq("pavimento_id", origemPavId);
+      if (e1) throw e1;
+      if (!ambientesOrigem || ambientesOrigem.length === 0) throw new Error("O pavimento de origem não tem ambientes para copiar.");
+
+      // 2. Verificar se destino já tem pendências nos ambientes existentes
+      const { data: existingAmbs } = await supabase.from("obra_ambientes" as any).select("id").eq("pavimento_id", destinoPavId);
+      const existingAmbIds = (existingAmbs || []).map((a: any) => a.id);
+
+      if (existingAmbIds.length > 0) {
+        const { data: pends } = await supabase.from("obra_pendencias" as any).select("id").in("ambiente_id", existingAmbIds);
+        if (pends && pends.length > 0) {
+          throw new Error("O pavimento de destino já possui pendências nos seus ambientes. Remova-as primeiro para poder sobrescrever.");
+        }
+        // Limpar ambientes existentes do destino (sem pendências)
+        await supabase.from("obra_ambientes" as any).delete().in("id", existingAmbIds);
+      }
+
+      // 3. Copiar ambientes da origem para o destino
+      const inserts = ambientesOrigem.map((amb: any) => ({
+        pavimento_id: destinoPavId,
+        nome: amb.nome,
+        numero_final: amb.numero_final,
+        planta_storage_path: amb.planta_storage_path,
+      }));
+
+      const { error: eIns } = await supabase.from("obra_ambientes" as any).insert(inserts);
+      if (eIns) throw eIns;
+
+      return { count: inserts.length };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["ambientes"] });
+    },
   });
 }

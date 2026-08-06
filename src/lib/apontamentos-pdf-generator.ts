@@ -164,11 +164,13 @@ export async function generateApontamentosPdf(data: ApontamentoPdfData): Promise
     // Sub-header: obra name + date
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.text(data.obraNome, MARGIN, CONTENT_TOP - 3);
+    const splitObraNome = doc.splitTextToSize(data.obraNome, PAGE_W - MARGIN * 2);
+    doc.text(splitObraNome, MARGIN, CONTENT_TOP - 3);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     const metaLine = [hoje, data.endereco].filter(Boolean).join(" — ");
-    doc.text(metaLine, MARGIN, CONTENT_TOP + 1);
+    const splitMetaLine = doc.splitTextToSize(metaLine, PAGE_W - MARGIN * 2);
+    doc.text(splitMetaLine, MARGIN, CONTENT_TOP + 1 + ((splitObraNome.length - 1) * 4));
 
     // Floor sub-header
     const floorLabel = andar.apelido || `Andar ${andar.numero}`;
@@ -259,12 +261,31 @@ export async function generateApontamentosPdf(data: ApontamentoPdfData): Promise
 
     for (const ap of andar.apontamentos) {
       if (legendY > maxLegendY) {
-        doc.setFontSize(7);
-        doc.setFont("helvetica", "italic");
-        doc.setTextColor(128, 128, 128);
-        doc.text("... (lista continua)", LEGEND_X, legendY);
-        doc.setTextColor(0, 0, 0);
-        break;
+        addFooter(doc, pageNum, totalPages);
+        doc.addPage("a4", "landscape");
+        await addLandscapeHeader(doc, "Apontamentos Visuais");
+        
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.text(splitObraNome, MARGIN, CONTENT_TOP - 3);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.text(splitMetaLine, MARGIN, CONTENT_TOP + 1 + ((splitObraNome.length - 1) * 4));
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.text(subHeader, MARGIN, CONTENT_TOP + 8 + ((splitObraNome.length - 1) * 4) + ((splitMetaLine.length - 1) * 3));
+
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.text("Legenda (Continuação)", LEGEND_X, imageTop);
+
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.2);
+        doc.line(LEGEND_X, imageTop + 9, LEGEND_X + LEGEND_AREA_W, imageTop + 9);
+        doc.setDrawColor(0, 0, 0);
+
+        legendY = imageTop + 14;
       }
 
       // Marker number
@@ -284,6 +305,9 @@ export async function generateApontamentosPdf(data: ApontamentoPdfData): Promise
       doc.setFont("helvetica", "normal");
       const descLines = doc.splitTextToSize(ap.descricao, maxDescWidth);
       const linesToRender = descLines.slice(0, 3); // max 3 lines per item
+      if (descLines.length > 3) {
+        linesToRender[2] = linesToRender[2].replace(/\s+$/, '') + "...";
+      }
       doc.text(linesToRender, LEGEND_X + 8, legendY);
 
       legendY += linesToRender.length * lineHeight + 2;

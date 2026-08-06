@@ -192,7 +192,7 @@ export async function generateRdoPdf(rdo: any, sections: any, obraId: string, ap
 
   // Assinaturas
   if (sections.assinatura && sections.assinatura.length > 0) {
-    if (currentY > pageHeight - 60) { doc.addPage(); currentY = 20; }
+    if (currentY > pageHeight - 70) { doc.addPage(); currentY = 20; }
     const ass = sections.assinatura[0]; // Relação 1:1
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
@@ -229,10 +229,13 @@ export async function generateRdoPdf(rdo: any, sections: any, obraId: string, ap
   }
   
   // Footer on cover page
+  const currentPage = doc.internal.getCurrentPageInfo().pageNumber;
+  doc.setPage(1);
   doc.setFontSize(8);
   doc.setTextColor(150, 150, 150);
   doc.text(`Criado em: ${dateStr}`, 15, pageHeight - 15);
   doc.text(`Criado por: Sistema`, 15, pageHeight - 10);
+  doc.setPage(currentPage);
 
   // Mídias (Galeria de Fotos do RDO)
   if (sections.midias && sections.midias.length > 0) {
@@ -269,9 +272,10 @@ export async function generateRdoPdf(rdo: any, sections: any, obraId: string, ap
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(12);
-      doc.text(midia.legenda || `Foto ${photosCount}`, 15, 55);
+      const splitLegenda = doc.splitTextToSize(midia.legenda || `Foto ${photosCount}`, pageWidth - 30);
+      doc.text(splitLegenda, 15, 55);
 
-      let y = 60;
+      let y = 60 + ((splitLegenda.length - 1) * 5);
       try {
         const { data: urlData } = supabase.storage.from("rdo-midias").getPublicUrl(midia.storage_path);
         const imgData = await fetchImageAsBase64(urlData.publicUrl);

@@ -8,14 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, Plus, MapPin, AlertCircle, CheckCircle2, Upload, Trash2, Camera, Loader2, MousePointer2 } from "lucide-react";
-import { useAmbientes, usePendencias, useCreateAmbiente, useDeleteAmbiente, useCreatePendencia, useResolvePendencia, Ambiente, useUploadPlantaAmbiente } from "@/hooks/use-5-passos";
+import { ChevronLeft, Plus, MapPin, AlertCircle, CheckCircle2, Upload, Trash2, Camera, Loader2, MousePointer2, Pencil, Image as ImageIcon } from "lucide-react";
+import { useAmbientes, usePendencias, useCreateAmbiente, useDeleteAmbiente, useCreatePendencia, useResolvePendencia, useUpdateAmbiente, useDeletePendencia, useUpdatePendencia, useUploadPlantaAmbiente, usePendenciasAmbienteCount, Ambiente } from "@/hooks/use-5-passos";
 import { PlantaBaixaViewer } from "@/components/apontamentos/planta-baixa-viewer";
 import { ImageDrawCanvas } from "@/components/apontamentos/image-draw-canvas";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useRole } from "@/hooks/use-auth";
+import { useConfirmStore } from "@/components/confirm-dialog";
 
 export const Route = createFileRoute("/_authenticated/obras/$obraId/torres/$torreId/pavimentos/$pavimentoId")({
   component: PavimentoAmbientesView,
@@ -86,8 +87,25 @@ function PavimentoAmbientesView() {
 }
 
 // ----------------------------------------------------------------------
-// Ambientes Sidebar (Passo 4)
+// Ambientes Sidebar (Passo 4) — com contadores e edição
 // ----------------------------------------------------------------------
+
+function AmbienteCountBadges({ ambienteId }: { ambienteId: string }) {
+  const counts = usePendenciasAmbienteCount(ambienteId);
+  const abertas = counts.data?.abertas ?? 0;
+  const resolvidas = counts.data?.resolvidas ?? 0;
+  if (abertas === 0 && resolvidas === 0) return null;
+  return (
+    <div className="flex gap-1.5 text-[0.6rem]">
+      {abertas > 0 && (
+        <span className="bg-destructive/15 text-destructive px-1.5 py-0.5 rounded-full font-bold">{abertas}</span>
+      )}
+      {resolvidas > 0 && (
+        <span className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded-full font-bold">{resolvidas}</span>
+      )}
+    </div>
+  );
+}
 
 function AmbientesSidebar({ pavimentoId, ambientes, selectedId, onSelect }: { pavimentoId: string, ambientes: Ambiente[], selectedId: string | null, onSelect: (id: string) => void }) {
   const [openAdd, setOpenAdd] = useState(false);
@@ -95,6 +113,15 @@ function AmbientesSidebar({ pavimentoId, ambientes, selectedId, onSelect }: { pa
   const [isApt, setIsApt] = useState(false);
   const [numeroFinal, setNumeroFinal] = useState("");
   const create = useCreateAmbiente();
+  const { data: role } = useRole();
+  const isAdmin = role === "admin";
+
+  // Edit state
+  const [editingAmbiente, setEditingAmbiente] = useState<Ambiente | null>(null);
+  const [editNome, setEditNome] = useState("");
+  const [editNumeroFinal, setEditNumeroFinal] = useState("");
+  const updateAmbiente = useUpdateAmbiente();
+  const deleteAmbiente = useDeleteAmbiente();
 
   const handleCreate = async () => {
     if (!nome.trim()) return;
@@ -116,6 +143,35 @@ function AmbientesSidebar({ pavimentoId, ambientes, selectedId, onSelect }: { pa
     }
   };
 
+  const handleEditSave = async () => {
+    if (!editingAmbiente || !editNome.trim()) return;
+    try {
+      await updateAmbiente.mutateAsync({
+        id: editingAmbiente.id,
+        nome: editNome.trim(),
+        numero_final: editNumeroFinal ? parseInt(editNumeroFinal) : null,
+      });
+      setEditingAmbiente(null);
+      toast.success("Ambiente atualizado.");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const handleDeleteAmbiente = async (a: Ambiente) => {
+    if (await useConfirmStore.getState().confirm(
+      `Remover o ambiente "${a.nome}"? Todas as pendências nele serão removidas.`,
+      "Remover ambiente"
+    )) {
+      try {
+        await deleteAmbiente.mutateAsync(a.id);
+        toast.success("Ambiente removido.");
+      } catch (e: any) {
+        toast.error(e.message);
+      }
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-3 flex items-center justify-between border-b">
@@ -130,21 +186,53 @@ function AmbientesSidebar({ pavimentoId, ambientes, selectedId, onSelect }: { pa
           <div className="text-xs text-muted-foreground text-center py-4 italic">Nenhum ambiente cadastrado.</div>
         ) : (
           ambientes.map(a => (
-            <button
-              key={a.id}
-              onClick={() => onSelect(a.id)}
-              className={`w-full text-left px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
-                selectedId === a.id ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted text-foreground"
-              }`}
-            >
-              <div className="flex justify-between items-center">
-                <span>{a.nome} {a.numero_final ? `(Final ${a.numero_final})` : ""}</span>
+            <div key={a.id} className="group relative">
+              <button
+                onClick={() => onSelect(a.id)}
+                className={`w-full text-left px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                  selectedId === a.id ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-muted text-foreground"
+                }`}
+              >
+                <div className="flex justify-between items-center">
+                  <span className="truncate">{a.nome} {a.numero_final ? `(Final ${a.numero_final})` : ""}</span>
+                  <AmbienteCountBadges ambienteId={a.id} />
+                </div>
+              </button>
+              {/* Edit/Delete buttons on hover */}
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingAmbiente(a);
+                    setEditNome(a.nome);
+                    setEditNumeroFinal(a.numero_final?.toString() || "");
+                  }}
+                >
+                  <Pencil className="size-3" />
+                </Button>
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteAmbiente(a);
+                    }}
+                  >
+                    <Trash2 className="size-3" />
+                  </Button>
+                )}
               </div>
-            </button>
+            </div>
           ))
         )}
       </div>
 
+      {/* Dialog: Criar Ambiente */}
       <Dialog open={openAdd} onOpenChange={setOpenAdd}>
         <DialogContent>
           <DialogHeader>
@@ -172,6 +260,29 @@ function AmbientesSidebar({ pavimentoId, ambientes, selectedId, onSelect }: { pa
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog: Editar Ambiente */}
+      <Dialog open={!!editingAmbiente} onOpenChange={(open) => { if (!open) setEditingAmbiente(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Ambiente</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome do Ambiente</Label>
+              <Input value={editNome} onChange={e => setEditNome(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Número Final (deixe vazio se não aplicável)</Label>
+              <Input type="number" value={editNumeroFinal} onChange={e => setEditNumeroFinal(e.target.value)} />
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setEditingAmbiente(null)}>Cancelar</Button>
+              <Button onClick={handleEditSave} disabled={!editNome.trim() || updateAmbiente.isPending}>Salvar</Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -186,6 +297,8 @@ function AmbienteDetail({ ambiente, obraId }: { ambiente: Ambiente, obraId: stri
   const [isAddingPin, setIsAddingPin] = useState(false);
   const [pinCoords, setPinCoords] = useState<{x: number, y: number} | null>(null);
   const [selectedPinId, setSelectedPinId] = useState<string | undefined>();
+  const { data: role } = useRole();
+  const isAdmin = role === "admin";
   
   const upload = useUploadPlantaAmbiente();
 
@@ -227,18 +340,39 @@ function AmbienteDetail({ ambiente, obraId }: { ambiente: Ambiente, obraId: stri
           <p className="text-xs text-muted-foreground mt-1">Planta e Pendências</p>
         </div>
         
-        {publicUrl && (
-          <Button 
-            onClick={() => setIsAddingPin(!isAddingPin)} 
-            variant={isAddingPin ? "secondary" : "default"}
-          >
-            {isAddingPin ? (
-              <>Cancelar Marcação</>
-            ) : (
-              <><MousePointer2 className="size-4 mr-2" /> Nova Pendência</>
-            )}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Substituir Planta (admin only) */}
+          {publicUrl && isAdmin && (
+            <>
+              <Label htmlFor={`replace-planta-${ambiente.id}`} className="cursor-pointer">
+                <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none h-9 px-3 border border-input bg-background hover:bg-accent hover:text-accent-foreground">
+                  <ImageIcon className="size-4 mr-2" />
+                  Trocar Planta
+                </div>
+              </Label>
+              <input 
+                id={`replace-planta-${ambiente.id}`} 
+                type="file" 
+                accept="image/png, image/jpeg, image/webp, application/pdf" 
+                className="hidden" 
+                onChange={handleUpload}
+                disabled={upload.isPending}
+              />
+            </>
+          )}
+          {publicUrl && (
+            <Button 
+              onClick={() => setIsAddingPin(!isAddingPin)} 
+              variant={isAddingPin ? "secondary" : "default"}
+            >
+              {isAddingPin ? (
+                <>Cancelar Marcação</>
+              ) : (
+                <><MousePointer2 className="size-4 mr-2" /> Nova Pendência</>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
       
       <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col">
@@ -319,20 +453,56 @@ function AmbienteDetail({ ambiente, obraId }: { ambiente: Ambiente, obraId: stri
 
 function PendenciaCard({ pendencia, obraId }: { pendencia: any, obraId: string }) {
   const resolve = useResolvePendencia();
+  const deletePend = useDeletePendencia();
   const [openResolve, setOpenResolve] = useState(false);
+  const { data: role } = useRole();
+  const isAdmin = role === "admin";
   const isResolvida = pendencia.status === "resolvida";
   const isVencida = pendencia.status === "vencida";
+
+  const handleDelete = async () => {
+    if (await useConfirmStore.getState().confirm(
+      `Apagar a pendência #${pendencia.codigo}? Esta ação não pode ser desfeita.`,
+      "Apagar pendência"
+    )) {
+      try {
+        await deletePend.mutateAsync({ id: pendencia.id, ambiente_id: pendencia.ambiente_id });
+        toast.success("Pendência removida.");
+      } catch (err: any) {
+        toast.error(err.message);
+      }
+    }
+  };
   
+  // Foto URLs
+  const fotoUrl = pendencia.foto_path
+    ? supabase.storage.from('apontamentos').getPublicUrl(pendencia.foto_path).data.publicUrl
+    : null;
+  const fotoBaixaUrl = pendencia.foto_baixa_path
+    ? supabase.storage.from('apontamentos').getPublicUrl(pendencia.foto_baixa_path).data.publicUrl
+    : null;
+
   return (
     <>
       <Card className={`border-l-4 ${isResolvida ? 'border-l-success' : isVencida ? 'border-l-destructive' : 'border-l-warning'}`}>
         <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
-          <div className="flex-none">
-            {/* Foto thumbnail */}
-            {pendencia.foto_path ? (
-              <div className="w-24 h-24 bg-muted rounded-md overflow-hidden bg-cover bg-center" style={{ backgroundImage: `url(${supabase.storage.from('apontamentos').getPublicUrl(pendencia.foto_path).data.publicUrl})` }} />
+          {/* Fotos: PRÉ e PÓS */}
+          <div className="flex-none flex gap-2">
+            {/* Foto original (PRÉ) */}
+            {fotoUrl ? (
+              <div className="relative">
+                <div className="w-24 h-24 bg-muted rounded-md overflow-hidden bg-cover bg-center" style={{ backgroundImage: `url(${fotoUrl})` }} />
+                <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[0.55rem] text-center py-0.5 rounded-b-md">PRÉ</span>
+              </div>
             ) : (
               <div className="w-24 h-24 bg-muted rounded-md flex items-center justify-center text-xs text-muted-foreground">Sem Foto</div>
+            )}
+            {/* Foto de baixa (PÓS) — só se resolvida */}
+            {isResolvida && fotoBaixaUrl && (
+              <div className="relative">
+                <div className="w-24 h-24 bg-muted rounded-md overflow-hidden bg-cover bg-center" style={{ backgroundImage: `url(${fotoBaixaUrl})` }} />
+                <span className="absolute bottom-0 left-0 right-0 bg-emerald-600/80 text-white text-[0.55rem] text-center py-0.5 rounded-b-md">PÓS</span>
+              </div>
             )}
           </div>
           <div className="flex-1 flex flex-col min-w-0">
@@ -343,12 +513,29 @@ function PendenciaCard({ pendencia, obraId }: { pendencia: any, obraId: string }
                   {isResolvida ? "Resolvida" : isVencida ? "Vencida" : "Em Aberto"}
                 </span>
               </div>
-              <div className="text-xs text-muted-foreground">
-                Criada: {format(new Date(pendencia.created_at), "dd/MM/yyyy")}
+              <div className="flex items-center gap-2">
+                <div className="text-xs text-muted-foreground">
+                  Criada: {format(new Date(pendencia.created_at), "dd/MM/yyyy")}
+                </div>
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                    onClick={handleDelete}
+                    title="Apagar pendência (admin)"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                )}
               </div>
             </div>
             
             <p className="mt-2 text-sm text-foreground break-words">{pendencia.descricao}</p>
+            
+            {pendencia.empreiteira && (
+              <p className="text-xs text-muted-foreground mt-1">Empreiteira: {pendencia.empreiteira}</p>
+            )}
             
             <div className="mt-auto pt-4 flex justify-between items-center">
               <span className="text-xs text-muted-foreground">Prazo: {format(new Date(pendencia.prazo), "dd/MM/yyyy")}</span>
@@ -358,7 +545,7 @@ function PendenciaCard({ pendencia, obraId }: { pendencia: any, obraId: string }
                   <CheckCircle2 className="size-3 mr-2" /> Dar Baixa
                 </Button>
               )}
-              {isResolvida && pendencia.foto_baixa_path && (
+              {isResolvida && pendencia.data_baixa && (
                 <Button size="sm" variant="ghost" className="h-8 text-success hover:text-success hover:bg-success/10" disabled>
                   <CheckCircle2 className="size-3 mr-2" /> Resolvida em {format(new Date(pendencia.data_baixa), "dd/MM")}
                 </Button>
