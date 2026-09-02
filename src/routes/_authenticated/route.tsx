@@ -1,12 +1,12 @@
-import { createFileRoute, Outlet, redirect, Link, useNavigate, useLocation } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, Link, useNavigate, useLocation, useMatches } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth, useProfile, useRole } from "@/hooks/use-auth";
+import { useAuth, useProfile, useRole, useModulos } from "@/hooks/use-auth";
 import { BritoLogo } from "@/components/brito-logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { OfflineIndicator } from "@/components/offline-indicator";
-import { History, LayoutDashboard, HardHat, Users as UsersIcon, Menu, X, LogOut, Moon, Sun } from "lucide-react";
+import { History, LayoutDashboard, HardHat, Users as UsersIcon, Menu, X, LogOut, Moon, Sun, Database, StickyNote, Calendar, ShoppingCart, DollarSign, Briefcase } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -33,6 +33,9 @@ function AuthenticatedLayout() {
     return false;
   });
 
+  const matches = useMatches();
+  const { data: modulos } = useModulos();
+
   useEffect(() => {
     const root = document.documentElement;
     if (dark) {
@@ -56,12 +59,64 @@ function AuthenticatedLayout() {
   const isAdmin = role === "admin";
   const isCliente = role === "cliente";
 
-  const nav = [
-    { to: "/dashboard", label: "Obras", icon: LayoutDashboard, show: true },
-    { to: "/obras", label: "Gerenciar obras", icon: HardHat, show: isAdmin },
+  const isHub = matches.some(m => m.routeId === "/_authenticated/hub");
+
+  const userModulos = modulos || [];
+
+  let mainNav = [];
+  
+  if (userModulos.includes("obras")) {
+    mainNav.push({ to: "/dashboard", label: "Dashboard (Obras)", icon: LayoutDashboard, show: true });
+    mainNav.push({ to: "/calendar", label: "Calendário", icon: Calendar, show: true });
+    mainNav.push({ to: "/notes", label: "Anotações", icon: StickyNote, show: true });
+    if (isAdmin) mainNav.push({ to: "/obras", label: "Gerenciar obras", icon: HardHat, show: true });
+  }
+
+  if (userModulos.includes("compras")) {
+    mainNav.push({ to: "/compras", label: "Compras e Suprimentos", icon: ShoppingCart, show: true });
+  }
+
+  if (userModulos.includes("financeiro")) {
+    mainNav.push({ to: "/financeiro", label: "Financeiro e Medição", icon: DollarSign, show: true });
+  }
+
+  if (userModulos.includes("rh")) {
+    mainNav.push({ to: "/rh", label: "RH e Segurança", icon: UsersIcon, show: true });
+  }
+
+  if (userModulos.includes("diretoria")) {
+    mainNav.push({ to: "/diretoria", label: "Painel Diretoria", icon: Briefcase, show: true });
+  }
+
+  const bottomNav = [
     { to: "/admin/usuarios", label: "Usuários", icon: UsersIcon, show: isAdmin },
     { to: "/admin/audit", label: "Audit log", icon: History, show: isAdmin },
+    { to: "/admin/backup", label: "Backup & Restauração", icon: Database, show: isAdmin },
+    { to: "/settings/profile", label: "Meu Perfil", icon: UsersIcon, show: true },
   ].filter((i) => i.show);
+
+  const nav = [...mainNav.filter(i => i.show), ...bottomNav];
+
+  if (isHub) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col transition-colors duration-300">
+        <header className="h-16 border-b border-border flex items-center justify-between px-6 bg-card">
+          <BritoLogo size="sm" className="h-8 w-auto" />
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => setDark(!dark)} title="Alternar tema">
+              {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleLogout} className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950" title="Sair">
+              <LogOut className="size-5" />
+            </Button>
+          </div>
+        </header>
+        <main className="flex-1 overflow-y-auto">
+          <Outlet />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -74,14 +129,16 @@ function AuthenticatedLayout() {
         sidebarCollapsed ? "w-20" : "w-64"
       )}>
         <div className={cn(
-          "border-b border-sidebar-border bg-white flex items-center h-[97px] py-2",
-          sidebarCollapsed ? "px-2 justify-center" : "px-6 justify-start"
+          "border-b border-sidebar-border bg-background flex flex-col items-center justify-center py-4 relative transition-all duration-300",
+          sidebarCollapsed ? "px-2 h-[80px]" : "px-4 h-[100px]"
         )}>
-          <BritoLogo 
-            iconOnly={sidebarCollapsed} 
-            size="xl" 
-            className="h-full max-h-[75px] w-auto object-contain" 
-          />
+          <div className="flex-1 flex items-center justify-center w-full select-none pointer-events-none">
+            <BritoLogo 
+              iconOnly={sidebarCollapsed} 
+              size="xl" 
+              className="h-full max-h-[50px] w-auto object-contain" 
+            />
+          </div>
         </div>
         <div className="flex-1 flex flex-col border-r border-sidebar-border">
         <nav className="flex-1 p-3 space-y-1">
@@ -206,7 +263,7 @@ function AuthenticatedLayout() {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 bg-background relative z-0">
         {/* Topbar desktop */}
         <header className="hidden md:flex items-center justify-between p-3 border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-30 shadow-sm">
           <div className="flex items-center gap-2">

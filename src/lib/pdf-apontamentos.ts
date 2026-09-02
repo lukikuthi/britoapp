@@ -146,6 +146,10 @@ export async function appendApontamentosToPdf(
 
   // 3. Render Pages for each Ambiente with Pendencias
   for (const ambiente of ambientesRaw) {
+    // YIELDING: Libera a thread principal para o React poder renderizar animações de loading
+    // e o navegador não dizer que a página "travou".
+    await new Promise(resolve => setTimeout(resolve, 5));
+
     const pends = pendenciasData.filter(p => p.ambiente_id === ambiente.id);
     if (pends.length === 0) continue; // Skip if no pendencies
 

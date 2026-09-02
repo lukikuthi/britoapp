@@ -2,7 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { LayoutGrid, MapPin, Menu, Camera, FileText, Activity, Package, FileCheck, HardHat, BarChart3, Ruler } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type ObraTab = "visao" | "analytics" | "mapa" | "rdo" | "fotografia" | "menu" | "materiais" | "laudos" | "sesmt" | "cronograma" | "concretagem" | "fvr" | "rnc" | "bm" | "medicao";
+export type ObraTab = "visao" | "analytics" | "mapa" | "rdo" | "fotografia" | "menu" | "laudos" | "cronograma" | "concretagem" | "fvr" | "rnc" | "bm" | "medicao";
 
 interface ObraBottomNavProps {
   obraId: string;
@@ -12,9 +12,7 @@ interface ObraBottomNavProps {
 const tabs: { id: ObraTab; label: string; icon: any; search: { tab: ObraTab } }[] = [
   { id: "visao", label: "Visão", icon: Activity, search: { tab: "visao" } },
   { id: "rdo", label: "RDO", icon: FileText, search: { tab: "rdo" } },
-  { id: "materiais", label: "Materiais", icon: Package, search: { tab: "materiais" } },
   { id: "laudos", label: "Laudos", icon: FileCheck, search: { tab: "laudos" } },
-  { id: "sesmt", label: "SESMT", icon: HardHat, search: { tab: "sesmt" } },
   { id: "cronograma", label: "Gantt", icon: LayoutGrid, search: { tab: "cronograma" } },
   { id: "medicao", label: "Medição", icon: Ruler, search: { tab: "medicao" } },
   { id: "menu", label: "Menu", icon: Menu, search: { tab: "menu" } },

@@ -23,13 +23,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ObraBottomNav, type ObraTab } from "@/components/obra-bottom-nav";
-import { ObraAnalyticsTab } from "@/components/obra-analytics-tab";
 import { ObraFotografiaTab } from "@/components/obra-fotografia-tab";
 import { ObraEapTab } from "@/components/obra-eap-tab";
 import { ObraProjetosTab } from "@/components/obra-projetos-tab";
-import { ObraMateriaisTab } from "@/components/obra-materiais-tab";
 import { ObraComissionamentoTab } from "@/components/obra-comissionamento-tab";
-import { ObraSesmtTab } from "@/components/obra-sesmt-tab";
 import { ObraCronogramaTab } from "@/components/obra-cronograma-tab";
 import { ObraConcretagemTab } from "@/components/obra-concretagem-tab";
 import { ObraFvrTab } from "@/components/obra-fvr-tab";
@@ -299,9 +296,7 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
           <MapaTab obraId={obraId} />
         )}
 
-        {tab === "analytics" && (
-          <ObraAnalyticsTab obraId={obraId} />
-        )}
+
 
         {tab === "rdo" && (
           <RdoTab obraId={obraId} />
@@ -335,17 +330,13 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
           <ObraMedicaoTab obraId={obraId} isAdmin={isAdmin} />
         )}
 
-        {tab === "materiais" && (
-          <ObraMateriaisTab obraId={obraId} isAdmin={isAdmin} />
-        )}
+
 
         {tab === "laudos" && (
           <ObraComissionamentoTab obraId={obraId} isAdmin={isAdmin} />
         )}
 
-        {tab === "sesmt" && (
-          <ObraSesmtTab obraId={obraId} isAdmin={isAdmin} />
-        )}
+
 
         {tab === "menu" && (
           <ObraMenuTab obraId={obraId} obra={obra.data} isAdmin={isAdmin} isCliente={isCliente} />

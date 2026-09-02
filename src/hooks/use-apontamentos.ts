@@ -216,19 +216,32 @@ export function useCreateApontamento() {
   return useMutation({
     mutationFn: async (input: CreateApontamentoInput) => {
       const { data: { user } } = await supabase.auth.getUser();
+      const payload = {
+        andar_id: input.andar_id,
+        pos_x: input.pos_x,
+        pos_y: input.pos_y,
+        descricao: input.descricao,
+        autor_id: user?.id ?? null,
+      };
+
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        // Salva Offline
+        const { savePendingApontamento } = await import("@/lib/apontamentos-offline");
+        await savePendingApontamento(input.obraId, input.andar_id, "apontamentos", "create", payload);
+        return { id: "offline-" + Date.now() };
+      }
 
       const { data, error } = await fromTable("apontamentos")
-        .insert({
-          andar_id: input.andar_id,
-          pos_x: input.pos_x,
-          pos_y: input.pos_y,
-          descricao: input.descricao,
-          autor_id: user?.id ?? null,
-        })
+        .insert(payload)
         .select("id")
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Tenta salvar offline como fallback se der erro de rede
+        const { savePendingApontamento } = await import("@/lib/apontamentos-offline");
+        await savePendingApontamento(input.obraId, input.andar_id, "apontamentos", "create", payload);
+        return { id: "offline-" + Date.now() };
+      }
       return data;
     },
     onSuccess: (_data, variables) => {
@@ -257,15 +270,24 @@ export function useUpdateApontamento() {
 
   return useMutation({
     mutationFn: async (input: UpdateApontamentoInput) => {
-      const payload: Record<string, unknown> = {};
+      const payload: Record<string, unknown> = { id: input.id };
       if (input.descricao !== undefined) payload.descricao = input.descricao;
       if (input.status !== undefined) payload.status = input.status;
+
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        const { savePendingApontamento } = await import("@/lib/apontamentos-offline");
+        await savePendingApontamento(input.obraId, input.andarId, "apontamentos", "update", payload);
+        return;
+      }
 
       const { error } = await fromTable("apontamentos")
         .update(payload)
         .eq("id", input.id);
 
-      if (error) throw error;
+      if (error) {
+        const { savePendingApontamento } = await import("@/lib/apontamentos-offline");
+        await savePendingApontamento(input.obraId, input.andarId, "apontamentos", "update", payload);
+      }
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["apontamentos", variables.andarId] });
@@ -289,11 +311,20 @@ export function useDeleteApontamento() {
 
   return useMutation({
     mutationFn: async (input: DeleteApontamentoInput) => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        const { savePendingApontamento } = await import("@/lib/apontamentos-offline");
+        await savePendingApontamento(input.obraId, input.andarId, "apontamentos", "delete", { id: input.id });
+        return;
+      }
+
       const { error } = await fromTable("apontamentos")
         .delete()
         .eq("id", input.id);
 
-      if (error) throw error;
+      if (error) {
+        const { savePendingApontamento } = await import("@/lib/apontamentos-offline");
+        await savePendingApontamento(input.obraId, input.andarId, "apontamentos", "delete", { id: input.id });
+      }
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["apontamentos", variables.andarId] });

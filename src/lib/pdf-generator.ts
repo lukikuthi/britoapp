@@ -244,6 +244,9 @@ export async function generateRdoPdf(rdo: any, sections: any, obraId: string, ap
     let photosCount = 0;
 
     for (const midia of sections.midias) {
+      // YIELDING: Libera a thread principal do navegador para o React atualizar spinners/telas.
+      await new Promise(resolve => setTimeout(resolve, 5));
+      
       if (midia.tipo !== "imagem") continue;
       
       doc.addPage("a4", "p");

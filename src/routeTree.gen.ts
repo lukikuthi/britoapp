@@ -12,10 +12,19 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRhRouteImport } from './routes/_authenticated/rh'
+import { Route as AuthenticatedNotesRouteImport } from './routes/_authenticated/notes'
+import { Route as AuthenticatedHubRouteImport } from './routes/_authenticated/hub'
+import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
+import { Route as AuthenticatedDiretoriaRouteImport } from './routes/_authenticated/diretoria'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedComprasRouteImport } from './routes/_authenticated/compras'
+import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedObrasIndexRouteImport } from './routes/_authenticated/obras.index'
+import { Route as AuthenticatedSettingsProfileRouteImport } from './routes/_authenticated/settings.profile'
 import { Route as AuthenticatedObrasObraIdRouteImport } from './routes/_authenticated/obras.$obraId'
 import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated/admin.usuarios'
+import { Route as AuthenticatedAdminBackupRouteImport } from './routes/_authenticated/admin.backup'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as AuthenticatedObrasObraIdTorresTorreIdRouteImport } from './routes/_authenticated/obras.$obraId.torres.$torreId'
 import { Route as AuthenticatedObrasObraIdRdosRdoIdRouteImport } from './routes/_authenticated/obras.$obraId.rdos.$rdoId'
@@ -36,9 +45,44 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRhRoute = AuthenticatedRhRouteImport.update({
+  id: '/rh',
+  path: '/rh',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedNotesRoute = AuthenticatedNotesRouteImport.update({
+  id: '/notes',
+  path: '/notes',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedHubRoute = AuthenticatedHubRouteImport.update({
+  id: '/hub',
+  path: '/hub',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDiretoriaRoute = AuthenticatedDiretoriaRouteImport.update({
+  id: '/diretoria',
+  path: '/diretoria',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedComprasRoute = AuthenticatedComprasRouteImport.update({
+  id: '/compras',
+  path: '/compras',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedObrasIndexRoute = AuthenticatedObrasIndexRouteImport.update({
@@ -46,6 +90,12 @@ const AuthenticatedObrasIndexRoute = AuthenticatedObrasIndexRouteImport.update({
   path: '/obras/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSettingsProfileRoute =
+  AuthenticatedSettingsProfileRouteImport.update({
+    id: '/settings/profile',
+    path: '/settings/profile',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedObrasObraIdRoute =
   AuthenticatedObrasObraIdRouteImport.update({
     id: '/obras/$obraId',
@@ -56,6 +106,12 @@ const AuthenticatedAdminUsuariosRoute =
   AuthenticatedAdminUsuariosRouteImport.update({
     id: '/admin/usuarios',
     path: '/admin/usuarios',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminBackupRoute =
+  AuthenticatedAdminBackupRouteImport.update({
+    id: '/admin/backup',
+    path: '/admin/backup',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
@@ -91,10 +147,19 @@ const AuthenticatedObrasObraIdTorresTorreIdAndaresAndarIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/calendar': typeof AuthenticatedCalendarRoute
+  '/compras': typeof AuthenticatedComprasRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/diretoria': typeof AuthenticatedDiretoriaRoute
+  '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/hub': typeof AuthenticatedHubRoute
+  '/notes': typeof AuthenticatedNotesRoute
+  '/rh': typeof AuthenticatedRhRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
+  '/admin/backup': typeof AuthenticatedAdminBackupRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/obras/$obraId': typeof AuthenticatedObrasObraIdRouteWithChildren
+  '/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/obras/': typeof AuthenticatedObrasIndexRoute
   '/obras/$obraId/rdos/$rdoId': typeof AuthenticatedObrasObraIdRdosRdoIdRoute
   '/obras/$obraId/torres/$torreId': typeof AuthenticatedObrasObraIdTorresTorreIdRouteWithChildren
@@ -104,10 +169,19 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/calendar': typeof AuthenticatedCalendarRoute
+  '/compras': typeof AuthenticatedComprasRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/diretoria': typeof AuthenticatedDiretoriaRoute
+  '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/hub': typeof AuthenticatedHubRoute
+  '/notes': typeof AuthenticatedNotesRoute
+  '/rh': typeof AuthenticatedRhRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
+  '/admin/backup': typeof AuthenticatedAdminBackupRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/obras/$obraId': typeof AuthenticatedObrasObraIdRouteWithChildren
+  '/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/obras': typeof AuthenticatedObrasIndexRoute
   '/obras/$obraId/rdos/$rdoId': typeof AuthenticatedObrasObraIdRdosRdoIdRoute
   '/obras/$obraId/torres/$torreId': typeof AuthenticatedObrasObraIdTorresTorreIdRouteWithChildren
@@ -119,10 +193,19 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
+  '/_authenticated/compras': typeof AuthenticatedComprasRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/diretoria': typeof AuthenticatedDiretoriaRoute
+  '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/_authenticated/hub': typeof AuthenticatedHubRoute
+  '/_authenticated/notes': typeof AuthenticatedNotesRoute
+  '/_authenticated/rh': typeof AuthenticatedRhRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
+  '/_authenticated/admin/backup': typeof AuthenticatedAdminBackupRoute
   '/_authenticated/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/_authenticated/obras/$obraId': typeof AuthenticatedObrasObraIdRouteWithChildren
+  '/_authenticated/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/_authenticated/obras/': typeof AuthenticatedObrasIndexRoute
   '/_authenticated/obras/$obraId/rdos/$rdoId': typeof AuthenticatedObrasObraIdRdosRdoIdRoute
   '/_authenticated/obras/$obraId/torres/$torreId': typeof AuthenticatedObrasObraIdTorresTorreIdRouteWithChildren
@@ -134,10 +217,19 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/calendar'
+    | '/compras'
     | '/dashboard'
+    | '/diretoria'
+    | '/financeiro'
+    | '/hub'
+    | '/notes'
+    | '/rh'
     | '/admin/audit'
+    | '/admin/backup'
     | '/admin/usuarios'
     | '/obras/$obraId'
+    | '/settings/profile'
     | '/obras/'
     | '/obras/$obraId/rdos/$rdoId'
     | '/obras/$obraId/torres/$torreId'
@@ -147,10 +239,19 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/calendar'
+    | '/compras'
     | '/dashboard'
+    | '/diretoria'
+    | '/financeiro'
+    | '/hub'
+    | '/notes'
+    | '/rh'
     | '/admin/audit'
+    | '/admin/backup'
     | '/admin/usuarios'
     | '/obras/$obraId'
+    | '/settings/profile'
     | '/obras'
     | '/obras/$obraId/rdos/$rdoId'
     | '/obras/$obraId/torres/$torreId'
@@ -161,10 +262,19 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/calendar'
+    | '/_authenticated/compras'
     | '/_authenticated/dashboard'
+    | '/_authenticated/diretoria'
+    | '/_authenticated/financeiro'
+    | '/_authenticated/hub'
+    | '/_authenticated/notes'
+    | '/_authenticated/rh'
     | '/_authenticated/admin/audit'
+    | '/_authenticated/admin/backup'
     | '/_authenticated/admin/usuarios'
     | '/_authenticated/obras/$obraId'
+    | '/_authenticated/settings/profile'
     | '/_authenticated/obras/'
     | '/_authenticated/obras/$obraId/rdos/$rdoId'
     | '/_authenticated/obras/$obraId/torres/$torreId'
@@ -201,6 +311,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/rh': {
+      id: '/_authenticated/rh'
+      path: '/rh'
+      fullPath: '/rh'
+      preLoaderRoute: typeof AuthenticatedRhRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/notes': {
+      id: '/_authenticated/notes'
+      path: '/notes'
+      fullPath: '/notes'
+      preLoaderRoute: typeof AuthenticatedNotesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/hub': {
+      id: '/_authenticated/hub'
+      path: '/hub'
+      fullPath: '/hub'
+      preLoaderRoute: typeof AuthenticatedHubRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/financeiro': {
+      id: '/_authenticated/financeiro'
+      path: '/financeiro'
+      fullPath: '/financeiro'
+      preLoaderRoute: typeof AuthenticatedFinanceiroRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/diretoria': {
+      id: '/_authenticated/diretoria'
+      path: '/diretoria'
+      fullPath: '/diretoria'
+      preLoaderRoute: typeof AuthenticatedDiretoriaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -208,11 +353,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/compras': {
+      id: '/_authenticated/compras'
+      path: '/compras'
+      fullPath: '/compras'
+      preLoaderRoute: typeof AuthenticatedComprasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/calendar': {
+      id: '/_authenticated/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof AuthenticatedCalendarRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/obras/': {
       id: '/_authenticated/obras/'
       path: '/obras'
       fullPath: '/obras/'
       preLoaderRoute: typeof AuthenticatedObrasIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/settings/profile': {
+      id: '/_authenticated/settings/profile'
+      path: '/settings/profile'
+      fullPath: '/settings/profile'
+      preLoaderRoute: typeof AuthenticatedSettingsProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/obras/$obraId': {
@@ -227,6 +393,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/usuarios'
       fullPath: '/admin/usuarios'
       preLoaderRoute: typeof AuthenticatedAdminUsuariosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/backup': {
+      id: '/_authenticated/admin/backup'
+      path: '/admin/backup'
+      fullPath: '/admin/backup'
+      preLoaderRoute: typeof AuthenticatedAdminBackupRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/audit': {
@@ -304,18 +477,36 @@ const AuthenticatedObrasObraIdRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
+  AuthenticatedComprasRoute: typeof AuthenticatedComprasRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDiretoriaRoute: typeof AuthenticatedDiretoriaRoute
+  AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
+  AuthenticatedHubRoute: typeof AuthenticatedHubRoute
+  AuthenticatedNotesRoute: typeof AuthenticatedNotesRoute
+  AuthenticatedRhRoute: typeof AuthenticatedRhRoute
   AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
+  AuthenticatedAdminBackupRoute: typeof AuthenticatedAdminBackupRoute
   AuthenticatedAdminUsuariosRoute: typeof AuthenticatedAdminUsuariosRoute
   AuthenticatedObrasObraIdRoute: typeof AuthenticatedObrasObraIdRouteWithChildren
+  AuthenticatedSettingsProfileRoute: typeof AuthenticatedSettingsProfileRoute
   AuthenticatedObrasIndexRoute: typeof AuthenticatedObrasIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
+  AuthenticatedComprasRoute: AuthenticatedComprasRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDiretoriaRoute: AuthenticatedDiretoriaRoute,
+  AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
+  AuthenticatedHubRoute: AuthenticatedHubRoute,
+  AuthenticatedNotesRoute: AuthenticatedNotesRoute,
+  AuthenticatedRhRoute: AuthenticatedRhRoute,
   AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
+  AuthenticatedAdminBackupRoute: AuthenticatedAdminBackupRoute,
   AuthenticatedAdminUsuariosRoute: AuthenticatedAdminUsuariosRoute,
   AuthenticatedObrasObraIdRoute: AuthenticatedObrasObraIdRouteWithChildren,
+  AuthenticatedSettingsProfileRoute: AuthenticatedSettingsProfileRoute,
   AuthenticatedObrasIndexRoute: AuthenticatedObrasIndexRoute,
 }
 

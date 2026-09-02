@@ -18,6 +18,7 @@ export interface BritoProfile {
   email: string | null;
   telefone: string | null;
   ativo: boolean;
+  avatar_url?: string | null;
 }
 
 interface AuthContextValue {
@@ -122,11 +123,46 @@ export function useProfile() {
     queryFn: async (): Promise<BritoProfile | null> => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, nome, email, telefone, ativo")
+        .select("id, nome, email, telefone, ativo, avatar_url")
         .eq("id", user!.id)
         .maybeSingle();
       if (error) throw error;
       return data as BritoProfile | null;
+    },
+  });
+}
+
+// ---- ARQUITETURA MATRIZ (Expansão de Setores) ---- //
+export type AppModulo = "obras" | "compras" | "financeiro" | "rh" | "diretoria";
+
+export function useModulos() {
+  const { user } = useAuth();
+  const { data: role, isLoading: roleLoading } = useRole();
+  
+  return useQuery({
+    queryKey: ["user-modulos", user?.id, role],
+    enabled: !!user?.id && !roleLoading,
+    queryFn: async (): Promise<AppModulo[]> => {
+      if (!user) return ["obras"];
+      
+      const { data, error } = await supabase
+        .from("user_modulos")
+        .select("modulo")
+        .eq("user_id", user.id);
+        
+      if (error) {
+        console.error("Erro ao carregar módulos:", error);
+        return role === "admin" ? ["obras", "compras", "financeiro", "rh", "diretoria"] : ["obras"];
+      }
+
+      if (!data || data.length === 0) {
+        // Se o admin antigo ainda não tem módulos na tabela, libera tudo pra ele não ficar preso
+        return role === "admin" 
+          ? ["obras", "compras", "financeiro", "rh", "diretoria"] 
+          : ["obras"];
+      }
+
+      return data.map(d => d.modulo as AppModulo);
     },
   });
 }

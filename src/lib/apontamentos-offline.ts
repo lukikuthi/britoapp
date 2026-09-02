@@ -111,3 +111,36 @@ export async function clearPendingApontamentos(): Promise<void> {
   const db = await getDb();
   await db.clear("pendingApontamentos");
 }
+
+export async function syncPendingApontamentos(): Promise<boolean> {
+  const items = await getPendingApontamentos();
+  if (items.length === 0) return false;
+
+  // Usa importação dinâmica pra evitar loops ciclicos de init.
+  const { supabase } = await import("@/integrations/supabase/client");
+  
+  let didSyncAnything = false;
+
+  for (const item of items) {
+    try {
+      if (item.operation === "create") {
+        await supabase.from(item.table).insert(item.payload);
+      } else if (item.operation === "update") {
+        await supabase.from(item.table).update(item.payload).eq("id", item.payload.id);
+      } else if (item.operation === "delete") {
+        await supabase.from(item.table).delete().eq("id", item.payload.id);
+      }
+      await markApontamentoSynced(item.id);
+      didSyncAnything = true;
+    } catch (e) {
+      console.error(`Erro ao sincronizar item offline ${item.id}`, e);
+    }
+  }
+
+  // Limpa as sincronizadas do banco local
+  if (didSyncAnything) {
+    await removeSyncedApontamentos();
+  }
+
+  return didSyncAnything;
+}

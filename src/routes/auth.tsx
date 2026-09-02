@@ -30,7 +30,7 @@ function AuthPage() {
     let active = true;
     supabase.auth.getSession().then(({ data }) => {
       if (active && data.session) {
-        navigate({ to: "/dashboard", replace: true });
+        navigate({ to: "/hub", replace: true });
       }
     });
     return () => {
@@ -50,7 +50,7 @@ function AuthPage() {
       return;
     }
     toast.success("Bem-vindo!");
-    navigate({ to: "/dashboard", replace: true });
+    navigate({ to: "/hub", replace: true });
   }
 
   async function handleResetPassword() {
