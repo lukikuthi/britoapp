@@ -54,8 +54,11 @@ function HubPage() {
 
   // Se o usuário só tiver 1 módulo, redireciona automaticamente para ele
   useEffect(() => {
-    if (modulos && modulos.length === 1 && modulos[0] === "obras") {
-      navigate({ to: "/dashboard", replace: true });
+    if (modulos && modulos.length === 1) {
+      const info = MODULE_INFO[modulos[0]];
+      if (info) {
+        navigate({ to: info.to, replace: true });
+      }
     }
   }, [modulos, navigate]);
 

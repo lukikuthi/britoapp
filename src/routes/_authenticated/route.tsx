@@ -8,12 +8,12 @@ import { cn } from "@/lib/utils";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { History, LayoutDashboard, HardHat, Users as UsersIcon, Menu, X, LogOut, Moon, Sun, Database, StickyNote, Calendar, ShoppingCart, DollarSign, Briefcase } from "lucide-react";
 
+import { requireAuth } from "@/lib/auth-guards";
+
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) throw redirect({ to: "/auth" });
-    return { user: data.user };
+    return await requireAuth();
   },
   component: AuthenticatedLayout,
 });

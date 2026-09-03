@@ -11,8 +11,11 @@ import { OBRA_STATUS_LABEL } from "@/lib/labels";
 
 import { useTutorial } from "@/hooks/use-tutorial";
 
+import { requireModulo } from "@/lib/auth-guards";
+
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Obras — BRITO ENGENHARIA" }] }),
+  beforeLoad: async () => await requireModulo("obras"),
   component: Dashboard,
 });
 

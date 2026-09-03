@@ -145,6 +145,11 @@ export function useModulos() {
     queryFn: async (): Promise<AppModulo[]> => {
       if (!user) return ["obras"];
       
+      // Admin SEMPRE tem acesso a tudo, independente do que tiver em user_modulos
+      if (role === "admin") {
+        return ["obras", "compras", "financeiro", "rh", "diretoria"];
+      }
+      
       const { data, error } = await supabase
         .from("user_modulos")
         .select("modulo")
@@ -152,14 +157,11 @@ export function useModulos() {
         
       if (error) {
         console.error("Erro ao carregar módulos:", error);
-        return role === "admin" ? ["obras", "compras", "financeiro", "rh", "diretoria"] : ["obras"];
+        return ["obras"];
       }
 
       if (!data || data.length === 0) {
-        // Se o admin antigo ainda não tem módulos na tabela, libera tudo pra ele não ficar preso
-        return role === "admin" 
-          ? ["obras", "compras", "financeiro", "rh", "diretoria"] 
-          : ["obras"];
+        return ["obras"];
       }
 
       return data.map(d => d.modulo as AppModulo);

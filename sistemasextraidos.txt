@@ -1,0 +1,1684 @@
+=======================================
+1. CALENDÁRIO (src/pages/CalendarView.tsx)
+=======================================
+
+import React, { useMemo, useState, useEffect } from 'react';
+import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
+import { format, parse, startOfWeek, getDay } from 'date-fns';
+import ptBR from 'date-fns/locale/pt-BR';
+import enUS from 'date-fns/locale/en-US';
+import es from 'date-fns/locale/es';
+import fr from 'date-fns/locale/fr';
+import de from 'date-fns/locale/de';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+import { useTranslation } from 'react-i18next';
+import { useWorkspaceStore } from '@/stores/workspace.store';
+import { useAuthStore } from '@/stores/auth.store';
+import { useCurrencyFormatter } from '@/hooks/useCurrencyFormatter';
+import { useTransactions, useUpdateTransaction } from '@/services/transactions.service';
+import { useProjects, useUpdateProject } from '@/services/projects.service';
+import PageHeader from '@/components/shared/PageHeader';
+import LoadingSkeleton from '@/components/shared/LoadingSkeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import * as LucideIcons from 'lucide-react';
+
+const ICONS = [
+  'StickyNote', 'Wallet', 'CreditCard', 'PiggyBank', 'DollarSign', 'TrendingUp', 'TrendingDown', 
+  'Home', 'Car', 'ShoppingCart', 'Coffee', 'Utensils', 'Bus', 'Plane', 'Briefcase', 'GraduationCap', 
+  'HeartPulse', 'Stethoscope', 'Pill', 'Dumbbell', 'Gamepad', 'Music', 'Film', 'Tv', 'Camera', 
+  'Smartphone', 'Laptop', 'Wifi', 'Gift', 'Calendar', 'Clock', 'Bell', 'AlertCircle', 'CheckCircle', 
+  'Star', 'Heart', 'Zap', 'Flame', 'Droplet', 'Umbrella', 'Sun', 'Moon', 'Cloud', 'Snowflake', 
+  'Smile', 'Frown', 'ThumbsUp', 'ThumbsDown', 'Eye', 'Lock', 'Unlock', 'Key', 'Wrench', 'Hammer', 
+  'Scissors', 'Paperclip', 'Folder', 'File', 'Book', 'Bookmark', 'Tag', 'Mail', 'MessageSquare', 
+  'Phone', 'Video', 'MapPin', 'Compass', 'Navigation', 'Flag', 'Trophy', 'Medal', 'Crown'
+];
+
+const locales = {
+  'pt-BR': ptBR,
+  'en': enUS,
+  'es': es,
+  'fr': fr,
+  'de': de,
+};
+
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales,
+});
+
+const DnDCalendar = withDragAndDrop(Calendar);
+
+const CalendarView = () => {
+  const { t, i18n } = useTranslation();
+  const { formatCurrency } = useCurrencyFormatter();
+  const mode = useWorkspaceStore((s) => s.mode);
+  const user = useAuthStore((s) => s.user);
+
+  const { data: transactions = [], isLoading: isLoadingTx } = useTransactions(mode);
+  const { data: projects = [], isLoading: isLoadingProj } = useProjects();
+  
+  const updateTransactionMutation = useUpdateTransaction();
+  const updateProjectMutation = useUpdateProject();
+
+  const [calendarNotes, setCalendarNotes] = useState<any[]>([]);
+  const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [noteTitle, setNoteTitle] = useState('');
+  const [noteIcon, setNoteIcon] = useState('StickyNote');
+
+  useEffect(() => {
+    if (user) {
+      const stored = localStorage.getItem(`calendar_notes_${user.id}`);
+      if (stored) setCalendarNotes(JSON.parse(stored));
+    }
+  }, [user]);
+
+  const saveNote = () => {
+    if (!noteTitle.trim() || !selectedDate || !user) return;
+    
+    // Save locally as YYYY-MM-DD to avoid Timezone shifts
+    const y = selectedDate.getFullYear();
+    const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const d = String(selectedDate.getDate()).padStart(2, '0');
+    
+    const newNote = {
+      id: crypto.randomUUID(),
+      title: noteTitle,
+      icon: noteIcon,
+      date: `${y}-${m}-${d}`,
+    };
+    
+    const updated = [...calendarNotes, newNote];
+    setCalendarNotes(updated);
+    localStorage.setItem(`calendar_notes_${user.id}`, JSON.stringify(updated));
+    
+    setIsNoteDialogOpen(false);
+    setNoteTitle('');
+    toast.success('Anotação salva no calendário!');
+  };
+
+  const deleteNote = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) return;
+    const updated = calendarNotes.filter(n => n.id !== id);
+    setCalendarNotes(updated);
+    localStorage.setItem(`calendar_notes_${user.id}`, JSON.stringify(updated));
+    toast.success('Anotação removida.');
+  };
+
+  const handleEventDrop = async ({ event, start, end }: any) => {
+    try {
+      const y = start.getFullYear();
+      const m = String(start.getMonth() + 1).padStart(2, '0');
+      const d = String(start.getDate()).padStart(2, '0');
+      const newDateStr = `${y}-${m}-${d}`;
+
+      if (event.resource.type === 'transaction') {
+        await updateTransactionMutation.mutateAsync({
+          id: event.id,
+          date: newDateStr
+        });
+        toast.success(t('transactions.updated', 'Transação atualizada com sucesso!'));
+      } 
+      else if (event.resource.type === 'project') {
+        const ey = end.getFullYear();
+        const em = String(end.getMonth() + 1).padStart(2, '0');
+        const ed = String(end.getDate()).padStart(2, '0');
+        const newEndDateStr = `${ey}-${em}-${ed}`;
+        
+        await updateProjectMutation.mutateAsync({
+          id: event.id,
+          start_date: newDateStr,
+          end_date: newEndDateStr
+        });
+        toast.success(t('projects.updated', 'Projeto atualizado com sucesso!'));
+      }
+      else if (event.resource.type === 'note' && user) {
+        const updated = calendarNotes.map(n => n.id === event.id ? { ...n, date: newDateStr } : n);
+        setCalendarNotes(updated);
+        localStorage.setItem(`calendar_notes_${user.id}`, JSON.stringify(updated));
+        toast.success('Anotação movida.');
+      }
+    } catch (error) {
+      toast.error('Erro ao mover evento.');
+    }
+  };
+
+  const events = useMemo(() => {
+    const txEvents = transactions.map((tx) => {
+      const [year, month, day] = tx.date.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      return {
+        id: tx.id,
+        title: `${tx.type === 'income' ? '+' : '-'}${formatCurrency(tx.amount)} | ${tx.description}`,
+        start: date,
+        end: date,
+        allDay: true,
+        resource: { type: 'transaction', data: tx },
+      };
+    });
+
+    const projEvents = projects.map((proj) => {
+      const [sYear, sMonth, sDay] = proj.start_date.split('-').map(Number);
+      const startDate = new Date(sYear, sMonth - 1, sDay);
+
+      let endDate = startDate;
+      if (proj.end_date) {
+        const [eYear, eMonth, eDay] = proj.end_date.split('-').map(Number);
+        endDate = new Date(eYear, eMonth - 1, eDay);
+      }
+
+      return {
+        id: proj.id,
+        title: `Projeto: ${proj.name}`,
+        start: startDate,
+        end: endDate,
+        allDay: true,
+        resource: { type: 'project', data: proj },
+      };
+    });
+
+    const noteEvents = calendarNotes.map((note) => {
+      let date;
+      if (note.date.includes('T')) {
+        date = new Date(note.date);
+      } else {
+        const [year, month, day] = note.date.split('-').map(Number);
+        date = new Date(year, month - 1, day);
+      }
+      return {
+        id: note.id,
+        title: note.title,
+        start: date,
+        end: date,
+        allDay: true,
+        resource: { type: 'note', data: note },
+      };
+    });
+
+    return [...txEvents, ...projEvents, ...noteEvents];
+  }, [transactions, projects, calendarNotes, formatCurrency]);
+
+  const isLoading = isLoadingTx || isLoadingProj;
+
+  // Custom event styling based on the event type
+  const eventPropGetter = (event: any) => {
+    let className = 'rounded text-xs font-semibold border-0 overflow-hidden ';
+
+    if (event.resource.type === 'transaction') {
+      if (event.resource.data.type === 'income') {
+        className += 'bg-success/20 text-success-foreground border-l-4 border-success';
+      } else {
+        className += 'bg-destructive/20 text-destructive-foreground border-l-4 border-destructive';
+      }
+    } else if (event.resource.type === 'project') {
+      className += 'bg-primary/20 text-primary-foreground border-l-4 border-primary';
+    } else if (event.resource.type === 'note') {
+      className += 'bg-accent/80 text-accent-foreground border-l-4 border-accent-foreground/50 shadow-sm';
+    }
+
+    return {
+      className,
+      style: { backgroundColor: 'transparent', color: 'inherit' }
+    };
+  };
+
+  const CustomEvent = ({ event }: any) => {
+    if (event.resource.type === 'note') {
+      const IconComp = (LucideIcons as any)[event.resource.data.icon] || LucideIcons.StickyNote;
+      return (
+        <div className="flex items-center gap-1.5 group relative w-full h-full py-1 px-1.5 overflow-hidden">
+          <IconComp className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate flex-1 text-left">{event.title}</span>
+          <button 
+            onClick={(e) => deleteNote(event.id, e)}
+            className="absolute right-0 top-0 bottom-0 px-2 bg-accent hover:bg-destructive hover:text-white transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center z-10"
+            title="Excluir anotação"
+          >
+            <LucideIcons.X className="w-3 h-3" />
+          </button>
+        </div>
+      );
+    }
+    return <div className="truncate block w-full py-0.5 px-1.5">{event.title}</div>;
+  };
+
+  return (
+    <div className="space-y-6 h-full flex flex-col">
+      <PageHeader
+        title={t('calendar.title', 'Calendário')}
+        subtitle={t('calendar.subtitle', 'Visualize suas transações, projetos e anotações')}
+      />
+
+      <div className="flex-1 min-h-[500px] md:min-h-[600px] bg-card rounded-xl border border-border p-2 md:p-4 shadow-card overflow-y-auto overflow-x-hidden">
+        {isLoading ? (
+          <LoadingSkeleton />
+        ) : (
+          <div className="h-full calendar-container">
+            <style dangerouslySetInnerHTML={{__html: `
+              .calendar-container .rbc-calendar {
+                font-family: inherit;
+                min-height: 600px;
+              }
+              .calendar-container .rbc-header {
+                padding: 8px;
+                font-weight: 600;
+                border-bottom: 1px solid hsl(var(--border));
+                border-left: 1px solid hsl(var(--border));
+              }
+              .calendar-container .rbc-month-view,
+              .calendar-container .rbc-time-view,
+              .calendar-container .rbc-agenda-view {
+                border: 1px solid hsl(var(--border));
+                border-radius: 0.5rem;
+                overflow: hidden;
+                background-color: hsl(var(--card));
+              }
+              .calendar-container .rbc-day-bg {
+                border-left: 1px solid hsl(var(--border));
+              }
+              .calendar-container .rbc-month-row {
+                border-top: 1px solid hsl(var(--border));
+              }
+              .calendar-container .rbc-off-range-bg {
+                background-color: hsl(var(--muted) / 0.3);
+              }
+              .calendar-container .rbc-today {
+                background-color: hsl(var(--accent) / 0.3);
+              }
+              .calendar-container .rbc-event {
+                padding: 0;
+                background: none;
+              }
+              .calendar-container .rbc-button-link {
+                color: hsl(var(--foreground));
+              }
+              .calendar-container .rbc-toolbar {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                margin-bottom: 1rem;
+                align-items: center;
+                justify-content: space-between;
+              }
+              .calendar-container .rbc-toolbar button {
+                color: hsl(var(--foreground));
+                border-color: hsl(var(--border));
+              }
+              .calendar-container .rbc-toolbar button:active,
+              .calendar-container .rbc-toolbar button.rbc-active {
+                background-color: hsl(var(--accent));
+                color: hsl(var(--accent-foreground));
+                border-color: hsl(var(--border));
+              }
+              .calendar-container .rbc-toolbar button:hover {
+                background-color: hsl(var(--accent) / 0.5);
+              }
+              
+              @media (max-width: 768px) {
+                .calendar-container .rbc-toolbar {
+                  flex-direction: column;
+                  gap: 1rem;
+                }
+                .calendar-container .rbc-toolbar .rbc-toolbar-label {
+                  order: -1;
+                  font-size: 1.25rem;
+                  font-weight: bold;
+                }
+                .calendar-container .rbc-toolbar .rbc-btn-group {
+                  width: 100%;
+                  display: flex;
+                  justify-content: center;
+                }
+                .calendar-container .rbc-toolbar .rbc-btn-group button {
+                  flex: 1;
+                  padding: 4px 8px;
+                  font-size: 0.8rem;
+                }
+                .calendar-container .rbc-event-content {
+                  font-size: 0.6rem;
+                }
+              }
+            `}} />
+            <div className="h-full">
+              <DnDCalendar
+                localizer={localizer}
+                events={events}
+                startAccessor="start"
+                endAccessor="end"
+                culture={i18n.language || 'pt-BR'}
+                defaultView="month"
+                views={['month', 'agenda']}
+                style={{ height: '100%' }}
+                eventPropGetter={eventPropGetter}
+                components={{
+                  event: CustomEvent,
+                }}
+                selectable={true}
+                draggableAccessor={() => true}
+                onEventDrop={handleEventDrop}
+                onEventResize={handleEventDrop}
+                resizable
+                onSelectSlot={(slotInfo) => {
+                  setSelectedDate(slotInfo.start);
+                  setNoteTitle('');
+                  setIsNoteDialogOpen(true);
+                }}
+                messages={{
+                  next: t('calendar.next', 'Próximo'),
+                  previous: t('calendar.previous', 'Anterior'),
+                  today: t('calendar.today', 'Hoje'),
+                  month: t('calendar.month', 'Mês'),
+                  week: t('calendar.week', 'Semana'),
+                  day: t('calendar.day', 'Dia'),
+                  agenda: t('calendar.agenda', 'Agenda'),
+                  date: t('calendar.date', 'Data'),
+                  time: t('calendar.time', 'Hora'),
+                  event: t('calendar.event', 'Evento'),
+                  noEventsInRange: t('calendar.noEvents', 'Nenhum evento neste período.'),
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("calendar.newNoteTitle", "Nova Anotação no Calendário")}</DialogTitle>
+          </DialogHeader>
+          <div className="flex gap-3 py-4">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-12 h-10 p-0 shrink-0">
+                  {React.createElement((LucideIcons as any)[noteIcon] || LucideIcons.StickyNote, { className: "w-5 h-5" })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[280px] p-2" align="start">
+                <div className="text-xs text-muted-foreground mb-2 px-1 font-medium">{t("calendar.scrollMoreIcons", "Role para ver mais ícones")}</div>
+                <div className="grid grid-cols-6 gap-1 h-[240px] overflow-y-auto scrollbar-thin pr-1">
+                  {ICONS.map((iconName) => {
+                    const Icon = (LucideIcons as any)[iconName];
+                    if (!Icon) return null;
+                    return (
+                      <button
+                        key={iconName}
+                        onClick={() => setNoteIcon(iconName)}
+                        className={`p-2 rounded-md flex items-center justify-center hover:bg-accent ${noteIcon === iconName ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+                        title={iconName}
+                      >
+                        <Icon className="w-4 h-4" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Input
+              placeholder={t("calendar.notePlaceholder", "Ex: Pagar conta de luz...")}
+              value={noteTitle}
+              onChange={(e) => setNoteTitle(e.target.value)}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveNote();
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsNoteDialogOpen(false)}>{t("common.cancel", "Cancelar")}</Button>
+            <Button onClick={saveNote}>{t("common.save", "Salvar")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default CalendarView;
+
+
+=======================================
+2. ANOTAÇÕES (src/pages/Notes.tsx)
+=======================================
+
+import { useState, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { 
+  useNotes, 
+  useCreateNote, 
+  useUpdateNote, 
+  useDeleteNote, 
+  useToggleNotePin, 
+  useToggleNoteArchive
+} from '@/services/notes.service';
+import { NoteEditor } from '@/components/editor/NoteEditor';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  Search, 
+  Plus, 
+  FileText, 
+  MoreVertical, 
+  Pin, 
+  PinOff, 
+  Archive, 
+  ArchiveRestore, 
+  Trash2,
+  Menu,
+  Lightbulb, Rocket, Target, Book, PenTool, Sparkles, BarChart2
+} from 'lucide-react';
+
+const ICONS = {
+  FileText, Lightbulb, Rocket, Target, Book, PenTool, Sparkles, BarChart2
+};
+
+const NoteIcon = ({ name, className }: { name: string, className?: string }) => {
+  const Icon = ICONS[name as keyof typeof ICONS] || FileText; // Force Lucide fallback, kill emojis
+  return <Icon className={className} />;
+};
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+export default function Notes() {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  
+  // Supabase Realtime Subscription
+  useEffect(() => {
+    const channel = supabase.channel('notes_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['notes'] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+  
+  // Data
+  const { data: notes = [], isLoading } = useNotes();
+  const createNote = useCreateNote();
+  const updateNote = useUpdateNote();
+  const deleteNote = useDeleteNote();
+  const togglePin = useToggleNotePin();
+  const toggleArchive = useToggleNoteArchive();
+
+  // State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+  const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+  
+  // Editor State
+  const [editorTitle, setEditorTitle] = useState('');
+  const [editorContent, setEditorContent] = useState<Record<string, unknown>>({});
+  const [editorIcon, setEditorIcon] = useState('FileText');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Delete Dialog State
+  const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
+
+  // Derived state
+  const selectedNote = useMemo(() => 
+    notes.find(n => n.id === selectedNoteId),
+  [notes, selectedNoteId]);
+
+  // Handle local state safely without debouncing cross-contamination
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+
+  // Sync selected note to editor state when it changes
+  useEffect(() => {
+    if (selectedNote && selectedNote.id !== editingNoteId) {
+      setEditorTitle(selectedNote.title);
+      setEditorContent(selectedNote.content || {});
+      setEditorIcon(selectedNote.icon);
+      setEditingNoteId(selectedNote.id);
+    } else if (!selectedNote) {
+      setEditorTitle('');
+      setEditorContent({});
+      setEditorIcon('FileText');
+      setEditingNoteId(null);
+    }
+  }, [selectedNote, editingNoteId]);
+
+  // Debounced Auto-save locked to specific editing ID
+  useEffect(() => {
+    if (editingNoteId && selectedNote) {
+      const handler = setTimeout(() => {
+        if (
+          editorTitle !== selectedNote.title || 
+          JSON.stringify(editorContent) !== JSON.stringify(selectedNote.content) ||
+          editorIcon !== selectedNote.icon
+        ) {
+          setIsSaving(true);
+          updateNote.mutate({
+            id: editingNoteId,
+            data: {
+              title: editorTitle,
+              content: editorContent,
+              icon: editorIcon
+            }
+          }, {
+            onSuccess: () => setIsSaving(false),
+            onError: () => {
+              setIsSaving(false);
+              toast.error('Erro ao salvar anotação');
+            }
+          });
+        }
+      }, 500);
+      return () => clearTimeout(handler);
+    }
+  }, [editorTitle, editorContent, editorIcon, editingNoteId, selectedNote, updateNote]);
+
+  // Filter notes
+  const filteredNotes = useMemo(() => {
+    let result = notes;
+    
+    if (searchQuery) {
+      const lowerQuery = searchQuery.toLowerCase();
+      result = result.filter(n => 
+        n.title.toLowerCase().includes(lowerQuery)
+      );
+    }
+
+    if (activeTab === 'pinned') {
+      result = result.filter(n => n.pinned && !n.archived);
+    } else if (activeTab === 'archived') {
+      result = result.filter(n => n.archived);
+    } else {
+      result = result.filter(n => !n.archived);
+    }
+
+    return result.sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+    });
+  }, [notes, searchQuery, activeTab]);
+
+  const handleCreateNote = () => {
+    createNote.mutate({
+      title: t('notes.untitled', 'Sem título'),
+      content: {},
+      icon: 'FileText',
+    }, {
+      onSuccess: (newNote) => {
+        setSelectedNoteId(newNote.id);
+      }
+    });
+  };
+
+  const handleDelete = () => {
+    if (noteToDelete) {
+      deleteNote.mutate(noteToDelete, {
+        onSuccess: () => {
+          toast.success(t('common.success', 'Sucesso'));
+          if (selectedNoteId === noteToDelete) {
+            setSelectedNoteId(null);
+          }
+          setNoteToDelete(null);
+        }
+      });
+    }
+  };
+
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full bg-card/60 backdrop-blur-md border-r border-white/10 md:bg-transparent">
+      <div className="p-4 md:p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold tracking-tight">{t('notes.title', 'Anotações')}</h1>
+          <Button size="icon" className="bg-primary shadow-lg hover:shadow-xl transition-all rounded-full h-10 w-10" onClick={handleCreateNote}>
+            <Plus className="h-5 w-5" />
+          </Button>
+        </div>
+        
+        <div className="relative group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <Input
+            type="search"
+            placeholder={t('notes.search', 'Buscar anotações...')}
+            className="pl-9 bg-background/80 border-border/50 rounded-xl h-11"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full grid grid-cols-3 bg-muted/50 p-1 rounded-xl">
+            <TabsTrigger value="all" className="rounded-lg">{t('notes.all', 'Todas')}</TabsTrigger>
+            <TabsTrigger value="pinned" className="rounded-lg">{t('notes.pinned', 'Fixadas')}</TabsTrigger>
+            <TabsTrigger value="archived" className="rounded-lg">{t('notes.archived', 'Arquivadas')}</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      <ScrollArea className="flex-1 px-4">
+        <div className="space-y-2 pb-6">
+          {filteredNotes.map(note => (
+            <div
+              key={note.id}
+              onClick={() => setSelectedNoteId(note.id)}
+              className={`flex items-start gap-3 p-4 rounded-2xl cursor-pointer transition-all border border-transparent group relative overflow-hidden \${
+                selectedNoteId === note.id 
+                  ? 'bg-primary/10 border-primary/20 shadow-sm' 
+                  : 'bg-card/50 hover:bg-card hover:border-border/50 hover:shadow-sm'
+              }`}
+            >
+              <div className={`p-2 rounded-xl \${selectedNoteId === note.id ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                <NoteIcon name={note.icon} className="h-5 w-5 shrink-0" />
+              </div>
+              <div className="flex-1 min-w-0 py-1">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <h3 className="font-semibold truncate text-[15px]">{note.title || t('notes.untitled', 'Sem título')}</h3>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {note.pinned && <Pin className="h-3 w-3 text-primary fill-primary/20" />}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-muted-foreground/80 whitespace-nowrap">
+                    {format(new Date(note.updated_at), "dd/MM", { locale: ptBR })}
+                  </span>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {t('common.edit', 'Anotação salva')}
+                  </p>
+                </div>
+              </div>
+
+              <div onClick={(e) => e.stopPropagation()} className="absolute right-2 top-1/2 -translate-y-1/2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm rounded-full shadow-sm">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                    <DropdownMenuItem onClick={() => togglePin.mutate({ id: note.id, pinned: !note.pinned })} className="rounded-lg">
+                      {note.pinned ? <PinOff className="h-4 w-4 mr-2" /> : <Pin className="h-4 w-4 mr-2" />}
+                      {note.pinned ? t('notes.unpin', 'Desafixar') : t('notes.pin', 'Fixar no topo')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => toggleArchive.mutate({ id: note.id, archived: !note.archived })} className="rounded-lg">
+                      {note.archived ? <ArchiveRestore className="h-4 w-4 mr-2" /> : <Archive className="h-4 w-4 mr-2" />}
+                      {note.archived ? t('notes.unarchive', 'Desarquivar') : t('notes.archive', 'Arquivar')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive focus:bg-destructive/10 focus:text-destructive rounded-lg" onClick={() => setNoteToDelete(note.id)}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      {t('notes.delete', 'Apagar Nota')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          ))}
+          {filteredNotes.length === 0 && !isLoading && (
+            <div className="text-center py-12 text-muted-foreground">
+              <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileText className="h-8 w-8 opacity-40" />
+              </div>
+              <p className="font-medium">{t('notes.emptyTitle', 'Nenhuma anotação')}</p>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-1 w-full h-full min-h-[70vh] bg-background/50 rounded-3xl border border-white/5 overflow-hidden shadow-2xl relative">
+      
+      {/* Sidebar (List) */}
+      <div className={`
+        ${selectedNote ? 'hidden lg:flex' : 'flex'}
+        flex-col w-full lg:w-[340px] flex-shrink-0 bg-muted/10 border-r border-border/50 z-10
+      `}>
+        <SidebarContent />
+      </div>
+
+      {/* Main Content (Editor/Empty State) */}
+      <div className={`
+        ${selectedNote ? 'flex' : 'hidden lg:flex'}
+        flex-1 flex-col min-w-0 bg-background/40 relative
+      `}>
+        {selectedNote ? (
+          <div className="flex-1 flex flex-col w-full h-full">
+            {/* iOS-like Mobile Back Header */}
+            <div className="lg:hidden flex items-center justify-between p-3 border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-10">
+              <Button variant="ghost" onClick={() => setSelectedNoteId(null)} className="text-primary hover:bg-primary/10 -ml-2 rounded-xl">
+                <Menu className="h-5 w-5 mr-1" />
+                Voltar
+              </Button>
+              <span className="text-xs font-semibold text-muted-foreground truncate px-4">{format(new Date(selectedNote.updated_at), "dd/MM HH:mm")}</span>
+            </div>
+
+            <div className="flex-1 flex flex-col p-4 sm:p-8 md:p-12 max-w-4xl mx-auto w-full overflow-y-auto">
+              <div className="mb-6 md:mb-10 group relative">
+                <div className="flex items-center gap-4 mb-2">
+                  <div className="relative shrink-0">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" className="h-16 w-16 md:h-20 md:w-20 p-0 hover:bg-accent rounded-2xl border border-transparent hover:border-border transition-all shadow-sm bg-card">
+                          <NoteIcon name={editorIcon} className="h-8 w-8 md:h-10 md:w-10 text-primary" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[280px] p-3 rounded-2xl shadow-2xl border border-border/50 backdrop-blur-xl bg-background/90" align="start">
+                        <div className="grid grid-cols-4 gap-2">
+                          {['FileText', 'Lightbulb', 'Rocket', 'Target', 'Book', 'PenTool', 'Sparkles', 'BarChart2'].map((iconName) => (
+                            <Button
+                              key={iconName} variant="ghost"
+                              className={`h-12 w-12 p-0 rounded-xl transition-all \${editorIcon === iconName ? 'bg-primary text-primary-foreground shadow-md scale-110' : 'hover:bg-accent hover:scale-105 text-muted-foreground'}`}
+                              onClick={() => setEditorIcon(iconName)}
+                            >
+                              <NoteIcon name={iconName} className="h-6 w-6" />
+                            </Button>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Input
+                      value={editorTitle}
+                      onChange={(e) => setEditorTitle(e.target.value)}
+                      placeholder={t('notes.untitled', 'Sem título')}
+                      className="text-3xl md:text-5xl font-extrabold h-auto py-2 border-none px-0 shadow-none focus-visible:ring-0 bg-transparent min-w-0 w-full tracking-tight placeholder:text-muted-foreground/30"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 bg-card/30 rounded-3xl md:p-6">
+                <NoteEditor 
+                  initialContent={selectedNote.content}
+                  onChange={setEditorContent}
+                  isSaving={isSaving}
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 relative overflow-hidden">
+            <div className="absolute inset-0 bg-grid-pattern opacity-[0.02]" />
+            <div className="h-32 w-32 bg-primary/5 rounded-full flex items-center justify-center mb-8 relative z-10">
+              <FileText className="h-16 w-16 text-primary/30" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground mb-3 relative z-10">{t('notes.emptyTitle', 'Nenhuma anotação selecionada')}</h2>
+            <p className="text-center max-w-sm mb-10 relative z-10 text-muted-foreground/80">{t('notes.emptyDesc', 'Selecione uma nota ao lado ou crie uma nova para organizar suas ideias com o poder do editor avançado.')}</p>
+            <Button onClick={handleCreateNote} size="lg" className="relative z-10 rounded-full shadow-xl bg-primary text-primary-foreground hover:-translate-y-1 transition-all">
+              <Plus className="h-5 w-5 mr-2" />
+              {t('notes.new', 'Criar Nova Nota')}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <AlertDialog open={!!noteToDelete} onOpenChange={(open) => !open && setNoteToDelete(null)}>
+        <AlertDialogContent className="rounded-2xl border border-white/10 shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-bold">{t('common.deleteConfirmTitle', 'Confirmar exclusão')}</AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              {t('notes.deleteConfirm', 'Tem certeza que deseja apagar permanentemente esta anotação?')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6">
+            <AlertDialogCancel className="rounded-xl font-medium">{t('common.cancel', 'Cancelar')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="rounded-xl font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-lg">
+              {t('common.delete', 'Apagar Permanentemente')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+
+=======================================
+3. EDITOR DE TEXTO (src/components/editor/NoteEditor.tsx)
+=======================================
+
+import { useEffect, useState } from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
+import Placeholder from '@tiptap/extension-placeholder';
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+import { common, createLowlight } from 'lowlight';
+import { EditorToolbar } from './EditorToolbar';
+import './editor.css';
+
+const lowlight = createLowlight(common);
+
+interface NoteEditorProps {
+  initialContent?: Record<string, unknown>;
+  onChange: (content: Record<string, unknown>) => void;
+  isSaving?: boolean;
+}
+
+export function NoteEditor({ initialContent, onChange, isSaving }: NoteEditorProps) {
+  const [isReady, setIsReady] = useState(false);
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        codeBlock: false, // disable starter kit code block to use lowlight instead
+      }),
+      TaskList,
+      TaskItem.configure({
+        nested: true,
+      }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      Placeholder.configure({
+        placeholder: 'Comece a digitar ou pressione "/" para comandos...',
+      }),
+      CodeBlockLowlight.configure({
+        lowlight,
+      }),
+    ],
+    content: initialContent || {},
+    onUpdate: ({ editor }) => {
+      onChange(editor.getJSON());
+    },
+    onCreate: () => {
+      setIsReady(true);
+    },
+  });
+
+  // Handle controlled content updates (e.g. switching notes) without cursor jumping
+  useEffect(() => {
+    if (editor && initialContent && isReady) {
+      // Check if content actually changed to avoid re-rendering loop
+      const currentContent = editor.getJSON();
+      if (JSON.stringify(currentContent) !== JSON.stringify(initialContent)) {
+        editor.commands.setContent(initialContent);
+      }
+    } else if (editor && !initialContent && isReady) {
+      editor.commands.setContent('');
+    }
+  }, [editor, initialContent, isReady]);
+
+  return (
+    <div className="flex flex-col h-full bg-background rounded-lg border shadow-sm overflow-hidden">
+      <EditorToolbar editor={editor} />
+      <div className="flex-1 overflow-y-auto relative">
+        <EditorContent 
+          editor={editor} 
+          className="prose prose-sm dark:prose-invert max-w-none p-4 sm:p-8 outline-none min-h-[50vh]" 
+        />
+      </div>
+    </div>
+  );
+}
+
+
+=======================================
+4. SERVIÇO ANOTAÇÕES (src/services/notes.service.ts)
+=======================================
+
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/stores/auth.store';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { noteSchema } from '@/lib/validation';
+
+export interface Note {
+  id: string;
+  user_id: string;
+  title: string;
+  content: Record<string, unknown>;
+  icon: string;
+  cover_url: string | null;
+  pinned: boolean;
+  archived: boolean;
+  parent_id: string | null;
+  linked_to: 'personal' | 'project' | 'client' | null;
+  linked_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const notesService = {
+  async list() {
+    const userId = useAuthStore.getState().getUserId();
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*')
+      .eq('user_id', userId)
+      .order('pinned', { ascending: false })
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+    return data as Note[];
+  },
+
+  async getById(id: string) {
+    const userId = useAuthStore.getState().getUserId();
+    const { data, error } = await supabase
+      .from('notes')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (error) throw error;
+    return data as Note;
+  },
+
+  async create(noteData: Partial<Note>) {
+    const userId = useAuthStore.getState().getUserId();
+    const validated = noteSchema.parse(noteData);
+
+    const { data, error } = await supabase
+      .from('notes')
+      .insert({
+        ...validated,
+        user_id: userId,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Note;
+  },
+
+  async update(id: string, noteData: Partial<Note>) {
+    const userId = useAuthStore.getState().getUserId();
+    
+    // We only validate the fields that are provided
+    const { data, error } = await supabase
+      .from('notes')
+      .update({
+        ...noteData,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Note;
+  },
+
+  async delete(id: string) {
+    const userId = useAuthStore.getState().getUserId();
+    const { error } = await supabase
+      .from('notes')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+  },
+
+  async togglePin(id: string, pinned: boolean) {
+    return this.update(id, { pinned });
+  },
+
+  async toggleArchive(id: string, archived: boolean) {
+    return this.update(id, { archived });
+  }
+};
+
+// React Query Hooks
+export const useNotes = () => {
+  return useQuery({
+    queryKey: ['notes'],
+    queryFn: () => notesService.list(),
+  });
+};
+
+export const useNote = (id: string) => {
+  return useQuery({
+    queryKey: ['notes', id],
+    queryFn: () => notesService.getById(id),
+    enabled: !!id,
+  });
+};
+
+export const useCreateNote = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<Note>) => notesService.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+    },
+  });
+};
+
+export const useUpdateNote = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Note> }) => 
+      notesService.update(id, data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+      queryClient.setQueryData(['notes', data.id], data);
+    },
+  });
+};
+
+export const useDeleteNote = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => notesService.delete(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+      queryClient.removeQueries({ queryKey: ['notes', id] });
+    },
+  });
+};
+
+export const useToggleNotePin = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) => 
+      notesService.togglePin(id, pinned),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+    },
+  });
+};
+
+export const useToggleNoteArchive = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, archived }: { id: string; archived: boolean }) => 
+      notesService.toggleArchive(id, archived),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+    },
+  });
+};
+
+
+=======================================
+5. PERFIL (src/pages/Profile.tsx)
+=======================================
+
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useAuthStore } from '@/stores/auth.store';
+import { useUIStore } from '@/stores/ui.store';
+import { useWorkspaceStore } from '@/stores/workspace.store';
+import { supportedLanguages } from '@/lib/i18n';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { ImageCropper } from '@/components/shared/ImageCropper';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Upload, LogOut, Trash2, Download, CheckCircle2 } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+
+export default function Profile() {
+  const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
+  const { user, logout } = useAuthStore();
+  const { theme, setTheme, background, setBackground, currency, setCurrency } = useUIStore();
+  const { mode, setMode } = useWorkspaceStore();
+
+  const changeLanguage = (lng: string) => i18n.changeLanguage(lng);
+  const handleModeChange = (val: string) => setMode(val as 'personal' | 'professional');
+
+  const { data: isMpConnected } = useQuery({
+    queryKey: ['mp_settings', user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data } = await supabase
+        .from('user_settings')
+        .select('mp_access_token')
+        .eq('user_id', user.id)
+        .single();
+      return !!data?.mp_access_token;
+    },
+    enabled: !!user,
+  });
+
+  useEffect(() => {
+    // Mercado Pago oauth callback leaves ?mp_success=true in the base URL before the hash
+    if (window.location.search.includes('mp_success')) {
+      toast.success('Mercado Pago conectado com sucesso!');
+      // Clean up the URL
+      const newUrl = window.location.origin + window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, newUrl);
+    } else if (window.location.search.includes('mp_error')) {
+      toast.error('Erro ao conectar o Mercado Pago.');
+      const newUrl = window.location.origin + window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, []);
+  
+  const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '');
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [deleteEmail, setDeleteEmail] = useState('');
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+
+  const handleUpdateProfile = async () => {
+    try {
+      setSaving(true);
+      const { error } = await supabase.auth.updateUser({
+        data: { full_name: fullName }
+      });
+      if (error) throw error;
+      toast.success(t('profile.update_success', 'Perfil atualizado com sucesso!'));
+    } catch (error) {
+      console.error(error);
+      toast.error(t('profile.update_error', 'Erro ao atualizar perfil.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) {
+      return;
+    }
+    const file = event.target.files[0];
+    setCropImageSrc(URL.createObjectURL(file));
+    event.target.value = '';
+  };
+
+  const onCropComplete = async (croppedBlob: Blob) => {
+    setCropImageSrc(null);
+    try {
+      setUploading(true);
+      const fileExt = 'jpeg';
+      const filePath = `${user?.id}-${Math.random()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, croppedBlob);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl }
+      });
+
+      if (updateError) throw updateError;
+      toast.success(t('profile.avatar_success', 'Foto atualizada com sucesso!'));
+    } catch (error) {
+      console.error(error);
+      toast.error(t('profile.avatar_error', 'Erro ao atualizar foto.'));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    try {
+      setUploading(true);
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { avatar_url: null }
+      });
+      if (updateError) throw updateError;
+      toast.success(t('profile.avatar_removed', 'Foto removida com sucesso!'));
+    } catch (error) {
+      console.error(error);
+      toast.error(t('profile.avatar_error', 'Erro ao remover foto.'));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleExportData = async () => {
+    if (!user) return;
+    try {
+      setIsExporting(true);
+      toast.loading(t('profile.exporting', 'Compilando seus dados...'), { id: 'export-data' });
+      
+      const [notesRes, filesRes, clientsRes, transactionsRes, projectsRes, leadsRes] = await Promise.all([
+        supabase.from('notes').select('*'),
+        supabase.from('files').select('*'),
+        supabase.from('clients').select('*'),
+        supabase.from('transactions').select('*'),
+        supabase.from('projects').select('*'),
+        supabase.from('leads').select('*')
+      ]);
+
+      const exportData = {
+        user: user.email,
+        exportDate: new Date().toISOString(),
+        notes: notesRes.data || [],
+        files: filesRes.data || [],
+        clients: clientsRes.data || [],
+        transactions: transactionsRes.data || [],
+        projects: projectsRes.data || [],
+        leads: leadsRes.data || []
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", `prontolead_backup_${new Date().getTime()}.json`);
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+
+      toast.success(t('profile.export_success', 'Dados exportados com sucesso!'), { id: 'export-data' });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error(t('profile.export_error', 'Falha ao exportar dados.'), { id: 'export-data' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportData = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) return;
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsExporting(true);
+      toast.loading(t('profile.importing', 'Analisando e mesclando backup...'), { id: 'import-data' });
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const content = e.target?.result as string;
+          const backup = JSON.parse(content);
+          
+          if (!backup.clients && !backup.projects && !backup.leads) {
+            throw new Error("Arquivo de backup inválido ou vazio.");
+          }
+
+          // Função auxiliar para injetar o user_id atual em todos os registros do backup
+          const prepareData = (items: any[]) => items.map(item => ({ ...item, user_id: user.id }));
+
+          // 1. Entidades independentes (Nível 1)
+          if (backup.clients?.length) await supabase.from('clients').upsert(prepareData(backup.clients));
+          if (backup.leads?.length) await supabase.from('leads').upsert(prepareData(backup.leads));
+          
+          // 2. Entidades dependentes de Clients (Nível 2)
+          if (backup.projects?.length) await supabase.from('projects').upsert(prepareData(backup.projects));
+          
+          // 3. Entidades dependentes de Projects e Clients (Nível 3)
+          if (backup.transactions?.length) await supabase.from('transactions').upsert(prepareData(backup.transactions));
+          if (backup.notes?.length) await supabase.from('notes').upsert(prepareData(backup.notes));
+          if (backup.files?.length) await supabase.from('files').upsert(prepareData(backup.files));
+
+          toast.success(t('profile.import_success', 'Backup restaurado com sucesso!'), { id: 'import-data' });
+          queryClient.invalidateQueries(); // Força o react-query a recarregar tudo
+        } catch (err) {
+          console.error(err);
+          toast.error(t('profile.import_error', 'Falha ao ler ou restaurar o arquivo. O arquivo pode estar corrompido.'), { id: 'import-data' });
+        } finally {
+          setIsExporting(false);
+          // Reseta o input file para permitir importar o mesmo arquivo novamente se necessário
+          event.target.value = '';
+        }
+      };
+      reader.readAsText(file);
+    } catch (error) {
+      console.error(error);
+      setIsExporting(false);
+      toast.error(t('profile.import_error', 'Erro inesperado na importação.'), { id: 'import-data' });
+    }
+  };
+
+  const [deleteCode, setDeleteCode] = useState('');
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    try {
+      toast.loading(t('common.deleting', 'Apagando todos os dados...'), { id: 'delete' });
+      
+      // Wipe all user data
+      await Promise.all([
+        supabase.from('notes').delete().eq('user_id', user.id),
+        supabase.from('files').delete().eq('user_id', user.id),
+        supabase.from('clients').delete().eq('user_id', user.id),
+        supabase.from('transactions').delete().eq('user_id', user.id),
+        supabase.from('projects').delete().eq('user_id', user.id),
+        supabase.from('leads').delete().eq('user_id', user.id),
+        supabase.from('subscriptions').delete().eq('user_id', user.id)
+      ]);
+      
+      // Attempt to delete user via auth API if we had a backend function, 
+      // but for now wiping data and signing out acts as account "reset/deletion".
+      // Let's clear auth too:
+      await supabase.auth.updateUser({
+        data: { full_name: 'Deleted User', avatar_url: null }
+      });
+      
+      toast.success(t('profile.deleted', 'Conta e dados excluídos com sucesso.'), { id: 'delete' });
+      await logout();
+      window.location.href = '/login';
+    } catch (error) {
+      console.error(error);
+      toast.error(t('profile.delete_error', 'Erro ao excluir dados.'), { id: 'delete' });
+    }
+  };
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto pb-12 px-4 sm:px-6 w-full max-w-[100vw] box-border overflow-x-hidden">
+      <PageHeader
+        title={t('navigation.profile', 'Perfil')}
+        subtitle={t('profile.subtitle', 'Gerencie suas informações e preferências.')}
+      />
+
+      <div className="grid gap-6 w-full">
+        {/* User Info Section */}
+        <div className="bg-card border rounded-xl p-6 space-y-6 shadow-sm w-full">
+          <h2 className="text-lg font-semibold">{t('profile.info_section', 'Informações Pessoais')}</h2>
+          
+          <div className="flex flex-col sm:flex-row sm:items-center gap-6 w-full">
+            <div className="relative group shrink-0 mx-auto sm:mx-0">
+              <Avatar className="h-24 w-24 border-4 border-background shadow-sm">
+                <AvatarImage src={user?.user_metadata?.avatar_url} />
+                <AvatarFallback className="text-2xl">
+                  {fullName ? fullName.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <label className="absolute bottom-0 right-0 p-1.5 bg-primary text-primary-foreground rounded-full cursor-pointer shadow-md hover:scale-105 transition-transform overflow-hidden">
+                <Upload className="h-4 w-4 relative z-10" />
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  disabled={uploading}
+                />
+              </label>
+            </div>
+            
+            <div className="flex-1 space-y-4 w-full min-w-0">
+              <div className="flex items-center gap-2 mb-2">
+                {user?.user_metadata?.avatar_url && (
+                    <Button 
+                      variant="secondary" 
+                      size="sm" 
+                      onClick={handleRemoveAvatar} 
+                      disabled={uploading}
+                      className="text-destructive dark:bg-transparent dark:border-border dark:hover:bg-destructive/10 dark:shadow-none"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {t('profile.remove_photo', 'Remover Foto')}
+                    </Button>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fullName">{t('auth.full_name', 'Nome Completo')}</Label>
+                <Input
+                  id="fullName"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">{t('auth.email', 'Email')}</Label>
+                <Input
+                  id="email"
+                  value={user?.email || ''}
+                  readOnly
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-between items-center pt-2">
+            <p className="text-xs text-muted-foreground">
+              {t('profile.member_since', 'Membro desde:')} {new Date(user?.created_at || '').toLocaleDateString()}
+            </p>
+            <Button onClick={handleUpdateProfile} disabled={saving}>
+              {saving ? t('common.saving', 'Salvando...') : t('common.save', 'Salvar')}
+            </Button>
+          </div>
+        </div>
+
+        {/* Preferences Section */}
+        <div className="bg-card border rounded-xl p-6 space-y-6 shadow-sm overflow-hidden w-full">
+          <h2 className="text-lg font-semibold">{t('profile.preferences_section', 'Preferências')}</h2>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{t('profile.language', 'Idioma')}</Label>
+              <Select value={i18n.language} onValueChange={(val) => i18n.changeLanguage(val)}>
+                <SelectTrigger className="w-full sm:w-[300px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {supportedLanguages.map((lang) => (
+                    <SelectItem key={lang.code} value={lang.code}>
+                      <span className="flex items-center gap-2">
+                        <span>{lang.flag}</span>
+                        <span>{lang.name}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <Label>{t('profile.theme', 'Tema')}</Label>
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <label className="flex items-center space-x-2 cursor-pointer group">
+                  <input
+                    type="radio" name="theme" value="light"
+                    checked={theme === 'light'} onChange={() => setTheme('light')}
+                    className="w-4 h-4 text-primary border-primary focus:ring-primary accent-primary"
+                  />
+                  <span className="font-normal">{t('profile.theme_light', 'Claro')}</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer group">
+                  <input
+                    type="radio" name="theme" value="dark"
+                    checked={theme === 'dark'} onChange={() => setTheme('dark')}
+                    className="w-4 h-4 text-primary border-primary focus:ring-primary accent-primary"
+                  />
+                  <span className="font-normal">{t('profile.theme_dark', 'Escuro')}</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <Label>{t('profile.currency', 'Moeda Padrão')}</Label>
+              <Select value={currency} onValueChange={(val: any) => setCurrency(val)}>
+                <SelectTrigger className="w-full sm:w-[300px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BRL">{t("profile.currency.brl", "Real Brasileiro (BRL - R$)")}</SelectItem>
+                  <SelectItem value="USD">{t("profile.currency.usd", "Dólar Americano (USD - $)")}</SelectItem>
+                  <SelectItem value="EUR">{t("profile.currency.eur", "Euro (EUR - €)")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col space-y-1.5 mt-4">
+              <Label>{t('mode.title', 'Modo da Plataforma')}</Label>
+              <RadioGroup value={mode} onValueChange={handleModeChange} className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-2">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="personal" id="mode-personal" />
+                  <Label htmlFor="mode-personal" className="cursor-pointer">{t('mode.personal', 'Pessoal')}</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="professional" id="mode-professional" />
+                  <Label htmlFor="mode-professional" className="cursor-pointer">{t('mode.professional', 'Profissional')}</Label>
+                </div>
+              </RadioGroup>
+            </div>
+          </div>
+        </div>
+        
+        {/* Integrations Section */}
+        <div className="bg-card border rounded-xl p-4 sm:p-6 space-y-4 shadow-sm w-full min-w-0">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            Integrações e Pagamentos
+          </h2>
+          <p className="text-sm text-muted-foreground break-words">
+            Conecte sua conta do Mercado Pago para gerar faturas e QR Codes dinâmicos com baixa automática (Webhook) de pagamentos dos seus clientes.
+          </p>
+          <div className="pt-2">
+            {isMpConnected ? (
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                <div className="flex items-center gap-2 text-emerald-500 bg-emerald-500/10 px-4 py-2 rounded-md border border-emerald-500/20 font-medium w-full sm:w-auto justify-center">
+                  <CheckCircle2 className="w-5 h-5" />
+                  Mercado Pago Conectado
+                </div>
+                <Button 
+                  variant="secondary" 
+                  className="w-full sm:w-auto"
+                  onClick={async () => {
+                    if (!user) return;
+                    await supabase.from('user_settings').update({ mp_access_token: null, mp_refresh_token: null }).eq('user_id', user.id);
+                    queryClient.invalidateQueries({ queryKey: ['mp_settings', user.id] });
+                    toast.success('Mercado Pago desconectado.');
+                  }}
+                >
+                  Desconectar
+                </Button>
+              </div>
+            ) : (
+              <Button 
+                className="w-full sm:w-auto bg-[#009ee3] hover:bg-[#009ee3]/90 text-white font-medium border border-transparent shadow-sm flex items-center gap-2"
+                onClick={() => {
+                  const clientId = '858792244771490';
+                  const redirectUri = 'https://rnzhjcpvpmqnpbdjkcfx.supabase.co/functions/v1/mp-oauth-callback';
+                  const authUrl = `https://auth.mercadopago.com/authorization?client_id=${clientId}&response_type=code&platform_id=mp&state=${user?.id}&redirect_uri=${redirectUri}`;
+                  window.location.href = authUrl;
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" className="w-5 h-5 fill-current" aria-hidden="true"><path d="M22.5 11h-13c-1.9 0-3.5 1.6-3.5 3.5v3c0 1.9 1.6 3.5 3.5 3.5h13c1.9 0 3.5-1.6 3.5-3.5v-3c0-1.9-1.6-3.5-3.5-3.5zM24 17.5c0 .8-.7 1.5-1.5 1.5h-13c-.8 0-1.5-.7-1.5-1.5v-3c0-.8.7-1.5 1.5-1.5h13c.8 0 1.5.7 1.5 1.5v3z"/><path d="M11 14.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/></svg>
+                Conectar Mercado Pago
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Danger Zone */}
+        <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-4 sm:p-6 space-y-4 shadow-sm w-full min-w-0">
+          <h2 className="text-lg font-semibold text-destructive">{t('profile.danger_zone', 'Zona de Perigo')}</h2>
+          <p className="text-sm text-destructive/80 break-words">
+            {t('profile.delete_description', 'A exclusão da conta é irreversível. Todos os seus dados, clientes, e transações serão apagados permanentemente.')}
+          </p>
+          
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 pt-2">
+            <AlertDialog onOpenChange={(open) => {
+              if (open) {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                let code = '';
+                for(let i=0; i<6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+                setDeleteCode(code);
+                setDeleteEmail('');
+              }
+            }}>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="w-full sm:w-auto gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  {t('profile.delete_account', 'Excluir Conta')}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="bg-card border border-destructive/20 shadow-xl rounded-xl max-w-[95vw] sm:max-w-lg mx-auto">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-destructive flex items-center gap-2">
+                    <Trash2 className="h-5 w-5" />
+                    Cofre de Exclusão Permanente
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-3 pt-2 text-foreground/80">
+                    <p>
+                      {t("profile.deleteText1", "Para confirmar a exclusão irreversível de ")}<strong>{t("profile.deleteText2", "todos os seus dados, leads, projetos e histórico financeiro")}</strong>{t("profile.deleteText3", ", por favor, digite o código de segurança abaixo:")}
+                    </p>
+                    <div className="p-3 bg-muted/50 rounded-lg font-mono text-xl border font-bold text-center tracking-widest text-destructive">
+                      {deleteCode}
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                  <div className="py-4">
+                    <Input 
+                      placeholder="Digite o código aqui..."
+                      value={deleteEmail}
+                      onChange={(e) => setDeleteEmail(e.target.value.toUpperCase())}
+                      className="border-destructive/30 focus-visible:ring-destructive w-full font-mono uppercase text-center text-lg tracking-widest placeholder:font-sans placeholder:normal-case placeholder:tracking-normal placeholder:text-base"
+                      maxLength={6}
+                    />
+                  </div>
+                <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                  <AlertDialogCancel onClick={() => setDeleteEmail('')} className="w-full sm:w-auto mt-0">Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteAccount}
+                    disabled={deleteEmail !== deleteCode || !deleteCode}
+                    className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Excluir Permanentemente
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <Button variant="secondary" onClick={logout} className="w-full sm:w-auto gap-2 sm:ml-auto">
+              <LogOut className="h-4 w-4" />
+              {t('auth.logout', 'Sair')}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {cropImageSrc && (
+        <ImageCropper
+          imageSrc={cropImageSrc}
+          onCropComplete={onCropComplete}
+          onCancel={() => setCropImageSrc(null)}
+        />
+      )}
+    </div>
+  );
+}

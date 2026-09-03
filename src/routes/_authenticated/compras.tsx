@@ -1,97 +1,78 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ShoppingCart, PackageOpen, Truck, FileText, ArrowRight } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { ShoppingCart, LayoutDashboard, PackageOpen, ShieldAlert, FileText, MessageSquare } from "lucide-react";
+import { requireModulo } from "@/lib/auth-guards";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import { ComprasDashboardTab } from "@/components/compras-dashboard-tab";
+import { ComprasEstoqueTab } from "@/components/compras-estoque-tab";
+
+import { ComprasCertificadosTab } from "@/components/compras-certificados-tab";
+import { ComprasBoletosTab } from "@/components/compras-boletos-tab";
+import { ComprasMensagensTab } from "@/components/compras-mensagens-tab";
 
 export const Route = createFileRoute("/_authenticated/compras")({
   head: () => ({ meta: [{ title: "Compras — BRITO ENGENHARIA" }] }),
+  beforeLoad: async () => await requireModulo("compras"),
   component: ComprasDashboard,
 });
 
 function ComprasDashboard() {
   return (
-    <div className="flex-1 flex flex-col p-6 animate-in fade-in duration-500 max-w-7xl mx-auto w-full space-y-8">
+    <div className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500 max-w-7xl mx-auto w-full space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
           <ShoppingCart className="size-8 text-amber-500" />
           Setor de Compras e Suprimentos
         </h1>
-        <p className="text-muted-foreground mt-1">Gestão centralizada de cotações, pedidos e fornecedores de todas as obras.</p>
+        <p className="text-muted-foreground mt-1">Gestão de estoque, certificados, emissão de boletos e requisições.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <CardHeader>
-            <PackageOpen className="size-8 text-blue-500 mb-2" />
-            <CardTitle>Requisições Pendentes</CardTitle>
-            <CardDescription>Materiais solicitados pelos engenheiros no canteiro</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">12</div>
-            <p className="text-sm text-muted-foreground mt-1">Aguardando cotação</p>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="dashboard" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 max-w-4xl h-auto p-1 bg-muted/50">
+          <TabsTrigger value="dashboard" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <LayoutDashboard className="w-4 h-4 mr-2" />
+            Painel Geral
+          </TabsTrigger>
+          <TabsTrigger value="estoque" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <PackageOpen className="w-4 h-4 mr-2" />
+            Estoque / EPIs
+          </TabsTrigger>
+          <TabsTrigger value="certificados" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <ShieldAlert className="w-4 h-4 mr-2" />
+            Certificados
+          </TabsTrigger>
+          <TabsTrigger value="boletos" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <FileText className="w-4 h-4 mr-2" />
+            Boletos & Notas
+          </TabsTrigger>
+          <TabsTrigger value="mensagens" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <MessageSquare className="w-4 h-4 mr-2" />
+            Requisições
+          </TabsTrigger>
+        </TabsList>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <CardHeader>
-            <FileText className="size-8 text-amber-500 mb-2" />
-            <CardTitle>Cotações em Andamento</CardTitle>
-            <CardDescription>Análise de propostas de fornecedores</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">5</div>
-            <p className="text-sm text-muted-foreground mt-1">Comparativos ativos</p>
-          </CardContent>
-        </Card>
+        <div className="mt-6">
+          <TabsContent value="dashboard" className="m-0 focus-visible:outline-none">
+            <ComprasDashboardTab />
+          </TabsContent>
+          
+          <TabsContent value="estoque" className="m-0 focus-visible:outline-none">
+            <ComprasEstoqueTab />
+          </TabsContent>
+          
+          <TabsContent value="certificados" className="m-0 focus-visible:outline-none">
+            <ComprasCertificadosTab />
+          </TabsContent>
+          
+          <TabsContent value="boletos" className="m-0 focus-visible:outline-none">
+            <ComprasBoletosTab />
+          </TabsContent>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <CardHeader>
-            <Truck className="size-8 text-green-500 mb-2" />
-            <CardTitle>Pedidos Emitidos</CardTitle>
-            <CardDescription>Acompanhamento de entregas nas obras</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">8</div>
-            <p className="text-sm text-muted-foreground mt-1">A caminho</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Últimas Solicitações das Obras</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center justify-between p-3 border rounded-lg bg-muted/20">
-                  <div>
-                    <p className="font-medium">Cimento Portland CP-II (50 sacos)</p>
-                    <p className="text-xs text-muted-foreground">Obra: Residencial Vista Bella • Há 2 horas</p>
-                  </div>
-                  <Button variant="ghost" size="icon"><ArrowRight className="size-4" /></Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Mural do Setor</CardTitle>
-            <CardDescription>Avisos importantes da diretoria para Compras</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center justify-center text-center p-8 border border-dashed rounded-lg bg-muted/10 h-[220px]">
-              <ShoppingCart className="size-12 text-muted-foreground/30 mb-3" />
-              <p className="text-muted-foreground text-sm">
-                Esta área será alimentada com os dados reais de requisições enviadas a partir dos diários e apontamentos das obras.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          <TabsContent value="mensagens" className="m-0 focus-visible:outline-none">
+            <ComprasMensagensTab />
+          </TabsContent>
+        </div>
+      </Tabs>
     </div>
   );
 }

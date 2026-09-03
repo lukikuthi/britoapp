@@ -1,105 +1,59 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DollarSign, FileText, Ruler, Activity, ArrowRight } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { DollarSign, LayoutDashboard, ArrowRightLeft, Landmark } from "lucide-react";
+import { requireModulo } from "@/lib/auth-guards";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import { FinanceiroDashboardTab } from "@/components/financeiro-dashboard-tab";
+import { FinanceiroContasTab } from "@/components/financeiro-contas-tab";
+import { FinanceiroBancosTab } from "@/components/financeiro-bancos-tab";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   head: () => ({ meta: [{ title: "Financeiro — BRITO ENGENHARIA" }] }),
+  beforeLoad: async () => await requireModulo("financeiro"),
   component: FinanceiroDashboard,
 });
 
 function FinanceiroDashboard() {
   return (
-    <div className="flex-1 flex flex-col p-6 animate-in fade-in duration-500 max-w-7xl mx-auto w-full space-y-8">
+    <div className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 animate-in fade-in duration-500 max-w-7xl mx-auto w-full space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
           <DollarSign className="size-8 text-green-600" />
-          Setor Financeiro e Medições
+          Financeiro
         </h1>
-        <p className="text-muted-foreground mt-1">Controle de faturamento, pagamentos, BMs (Boletins de Medição) e fluxo de caixa.</p>
+        <p className="text-muted-foreground mt-1">Gestão de caixa, contas a pagar, contas a receber e conciliação bancária.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <CardHeader>
-            <Ruler className="size-8 text-blue-500 mb-2" />
-            <CardTitle>Medições a Faturar</CardTitle>
-            <CardDescription>Aguardando aprovação</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">4</div>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="dashboard" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 max-w-2xl h-auto p-1 bg-muted/50">
+          <TabsTrigger value="dashboard" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <LayoutDashboard className="w-4 h-4 mr-2" />
+            Fluxo de Caixa
+          </TabsTrigger>
+          <TabsTrigger value="transacoes" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <ArrowRightLeft className="w-4 h-4 mr-2" />
+            Pagar & Receber
+          </TabsTrigger>
+          <TabsTrigger value="bancos" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Landmark className="w-4 h-4 mr-2" />
+            Contas Bancárias
+          </TabsTrigger>
+        </TabsList>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <CardHeader>
-            <FileText className="size-8 text-purple-500 mb-2" />
-            <CardTitle>Boletins (BM)</CardTitle>
-            <CardDescription>Emitidos este mês</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">18</div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <CardHeader>
-            <DollarSign className="size-8 text-green-500 mb-2" />
-            <CardTitle>Contas a Receber</CardTitle>
-            <CardDescription>Próximos 15 dias</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R$ 142k</div>
-          </CardContent>
-        </Card>
-        
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
-          <CardHeader>
-            <Activity className="size-8 text-red-500 mb-2" />
-            <CardTitle>Contas a Pagar</CardTitle>
-            <CardDescription>Próximos 15 dias</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R$ 89k</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Últimos Boletins de Medição (BM)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center justify-between p-3 border rounded-lg bg-muted/20">
-                  <div>
-                    <p className="font-medium">BM #00{i} - Empreiteira Silva</p>
-                    <p className="text-xs text-muted-foreground">Obra: Residencial Vista Bella • Há {i} dias</p>
-                  </div>
-                  <Button variant="ghost" size="icon"><ArrowRight className="size-4" /></Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Mural do Setor</CardTitle>
-            <CardDescription>Avisos importantes da diretoria para o Financeiro</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center justify-center text-center p-8 border border-dashed rounded-lg bg-muted/10 h-[220px]">
-              <DollarSign className="size-12 text-muted-foreground/30 mb-3" />
-              <p className="text-muted-foreground text-sm">
-                Esta área será integrada ao módulo de obras para trazer os dados de faturamento em tempo real.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <div className="mt-6">
+          <TabsContent value="dashboard" className="m-0 focus-visible:outline-none">
+            <FinanceiroDashboardTab />
+          </TabsContent>
+          
+          <TabsContent value="transacoes" className="m-0 focus-visible:outline-none">
+            <FinanceiroContasTab />
+          </TabsContent>
+          
+          <TabsContent value="bancos" className="m-0 focus-visible:outline-none">
+            <FinanceiroBancosTab />
+          </TabsContent>
+        </div>
+      </Tabs>
     </div>
   );
 }
