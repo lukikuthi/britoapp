@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DollarSign, LayoutDashboard, ArrowRightLeft, Landmark } from "lucide-react";
+import { DollarSign, LayoutDashboard, ArrowRightLeft, Landmark, MessageSquare } from "lucide-react";
 import { requireModulo } from "@/lib/auth-guards";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { FinanceiroDashboardTab } from "@/components/financeiro-dashboard-tab";
 import { FinanceiroContasTab } from "@/components/financeiro-contas-tab";
 import { FinanceiroBancosTab } from "@/components/financeiro-bancos-tab";
+import { ChatSetor } from "@/components/chat-setor";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
   head: () => ({ meta: [{ title: "Financeiro — BRITO ENGENHARIA" }] }),
@@ -25,7 +26,7 @@ function FinanceiroDashboard() {
       </div>
 
       <Tabs defaultValue="dashboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-2xl h-auto p-1 bg-muted/50">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 max-w-3xl h-auto p-1 bg-muted/50">
           <TabsTrigger value="dashboard" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <LayoutDashboard className="w-4 h-4 mr-2" />
             Fluxo de Caixa
@@ -37,6 +38,10 @@ function FinanceiroDashboard() {
           <TabsTrigger value="bancos" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Landmark className="w-4 h-4 mr-2" />
             Contas Bancárias
+          </TabsTrigger>
+          <TabsTrigger value="mensagens" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <MessageSquare className="w-4 h-4 mr-2" />
+            Mensagens
           </TabsTrigger>
         </TabsList>
 
@@ -51,6 +56,10 @@ function FinanceiroDashboard() {
           
           <TabsContent value="bancos" className="m-0 focus-visible:outline-none">
             <FinanceiroBancosTab />
+          </TabsContent>
+
+          <TabsContent value="mensagens" className="m-0 focus-visible:outline-none">
+            <ChatSetor moduloAtual="financeiro" />
           </TabsContent>
         </div>
       </Tabs>

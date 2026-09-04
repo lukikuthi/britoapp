@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Loader2, ChevronRight } from "lucide-react";
 import { DashboardFab } from "@/components/dashboard-fab";
 import { OBRA_STATUS_LABEL } from "@/lib/labels";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChatSetor } from "@/components/chat-setor";
 
 import { useTutorial } from "@/hooks/use-tutorial";
 
@@ -113,70 +115,87 @@ function Dashboard() {
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6 pb-24">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Obras</h1>
-          <p className="text-sm text-muted-foreground mt-1">Selecione uma obra para ver o mapa e apontamentos.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Painel de Obras</h1>
+          <p className="text-sm text-muted-foreground mt-1">Gestão de obras, apontamentos e RDOs.</p>
         </div>
         <Button variant="outline" size="sm" className="tutorial-glow-wrapper" onClick={() => startTutorial((obrasQ.data?.length ?? 0) > 0)}>
           Iniciar Tutorial
         </Button>
       </div>
 
-      {obrasQ.isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="size-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : !obrasQ.data?.length ? (
-        <Card className="tour-lista-obras">
-          <CardContent className="py-12 text-center text-muted-foreground">
-            {isAdmin
-              ? "Nenhuma obra cadastrada. Use o botão + para adicionar."
-              : "Você ainda não foi vinculado a nenhuma obra. Fale com o administrador."}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 tour-lista-obras">
-          {obrasQ.data.map((o, idx) => {
-            const abertos = apontQ.data?.get(o.id) ?? 0;
-            return (
-              <Link
-                key={o.id}
-                to="/obras/$obraId"
-                params={{ obraId: o.id }}
-                search={{ tab: "visao" }}
-                className="block animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both"
-                style={{ animationDelay: `${idx * 100}ms` }}
-              >
-                <Card className="h-full hover:-translate-y-1 hover:shadow-lg hover:border-[var(--brand-gold)] transition-all duration-300">
-                  <CardContent className="p-5 flex flex-col justify-between h-full gap-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="font-semibold text-lg line-clamp-2">{o.nome}</div>
-                      <ChevronRight className="size-5 text-muted-foreground shrink-0 mt-1" />
-                    </div>
-                    
-                    <div className="flex flex-wrap items-center gap-2 mt-auto text-sm font-medium">
-                      <span className={o.status === "em_andamento" ? "text-primary" : "text-muted-foreground"}>
-                        {OBRA_STATUS_LABEL[o.status]}
-                      </span>
-                      {abertos > 0 && (
-                        <span className="text-destructive">
-                          • {abertos} apontamento{abertos !== 1 ? "s" : ""}
-                        </span>
-                      )}
-                      {(rdosQ.data?.get(o.id) ?? 0) > 0 && (
-                        <span className="text-amber-600 dark:text-amber-500">
-                          • {rdosQ.data!.get(o.id)} RDO{rdosQ.data!.get(o.id)! !== 1 ? "s" : ""}
-                        </span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-      )}
+      <Tabs defaultValue="obras" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-sm h-auto p-1 bg-muted/50 mb-6">
+          <TabsTrigger value="obras" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            Minhas Obras
+          </TabsTrigger>
+          <TabsTrigger value="mensagens" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            Mensagens Setoriais
+          </TabsTrigger>
+        </TabsList>
 
-      <DashboardFab isAdmin={isAdmin} />
+        <TabsContent value="obras" className="m-0 space-y-6 focus-visible:outline-none">
+          {obrasQ.isLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : !obrasQ.data?.length ? (
+            <Card className="tour-lista-obras">
+              <CardContent className="py-12 text-center text-muted-foreground">
+                {isAdmin
+                  ? "Nenhuma obra cadastrada. Use o botão + para adicionar."
+                  : "Você ainda não foi vinculado a nenhuma obra. Fale com o administrador."}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 tour-lista-obras">
+              {obrasQ.data.map((o, idx) => {
+                const abertos = apontQ.data?.get(o.id) ?? 0;
+                return (
+                  <Link
+                    key={o.id}
+                    to="/obras/$obraId"
+                    params={{ obraId: o.id }}
+                    search={{ tab: "visao" }}
+                    className="block animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both"
+                    style={{ animationDelay: `${idx * 100}ms` }}
+                  >
+                    <Card className="h-full hover:-translate-y-1 hover:shadow-lg hover:border-[var(--brand-gold)] transition-all duration-300">
+                      <CardContent className="p-5 flex flex-col justify-between h-full gap-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="font-semibold text-lg line-clamp-2">{o.nome}</div>
+                          <ChevronRight className="size-5 text-muted-foreground shrink-0 mt-1" />
+                        </div>
+                        
+                        <div className="flex flex-wrap items-center gap-2 mt-auto text-sm font-medium">
+                          <span className={o.status === "em_andamento" ? "text-primary" : "text-muted-foreground"}>
+                            {OBRA_STATUS_LABEL[o.status]}
+                          </span>
+                          {abertos > 0 && (
+                            <span className="text-destructive">
+                              • {abertos} apontamento{abertos !== 1 ? "s" : ""}
+                            </span>
+                          )}
+                          {(rdosQ.data?.get(o.id) ?? 0) > 0 && (
+                            <span className="text-amber-600 dark:text-amber-500">
+                              • {rdosQ.data!.get(o.id)} RDO{rdosQ.data!.get(o.id)! !== 1 ? "s" : ""}
+                            </span>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+          <DashboardFab isAdmin={isAdmin} />
+        </TabsContent>
+
+        <TabsContent value="mensagens" className="m-0 focus-visible:outline-none">
+          <ChatSetor moduloAtual="obras" />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

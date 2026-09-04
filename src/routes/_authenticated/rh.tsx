@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Users, LayoutDashboard, ShieldCheck, CalendarRange } from "lucide-react";
+import { Users, LayoutDashboard, ShieldCheck, CalendarRange, MessageSquare } from "lucide-react";
 import { requireModulo } from "@/lib/auth-guards";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RhDashboardTab } from "@/components/rh-dashboard-tab";
@@ -7,6 +7,7 @@ import { RhFuncionariosTab } from "@/components/rh-funcionarios-tab";
 
 import { RhExamesTab } from "@/components/rh-exames-tab";
 import { RhFeriasTab } from "@/components/rh-ferias-tab";
+import { ChatSetor } from "@/components/chat-setor";
 
 export const Route = createFileRoute("/_authenticated/rh")({
   head: () => ({ meta: [{ title: "RH — BRITO ENGENHARIA" }] }),
@@ -26,7 +27,7 @@ function RhDashboard() {
       </div>
 
       <Tabs defaultValue="dashboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 max-w-3xl h-auto p-1 bg-muted/50">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 max-w-4xl h-auto p-1 bg-muted/50">
           <TabsTrigger value="dashboard" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <LayoutDashboard className="w-4 h-4 mr-2" />
             Dashboard
@@ -42,6 +43,10 @@ function RhDashboard() {
           <TabsTrigger value="ferias" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <CalendarRange className="w-4 h-4 mr-2" />
             Férias
+          </TabsTrigger>
+          <TabsTrigger value="mensagens" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <MessageSquare className="w-4 h-4 mr-2" />
+            Mensagens
           </TabsTrigger>
         </TabsList>
 
@@ -60,6 +65,10 @@ function RhDashboard() {
           
           <TabsContent value="ferias" className="m-0 focus-visible:outline-none">
             <RhFeriasTab />
+          </TabsContent>
+
+          <TabsContent value="mensagens" className="m-0 focus-visible:outline-none">
+            <ChatSetor moduloAtual="rh" />
           </TabsContent>
         </div>
       </Tabs>
