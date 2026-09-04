@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useKpisDiretoria } from "@/hooks/use-diretoria";
-import { Briefcase, Users, TrendingUp, TrendingDown, Landmark, Building2, Loader2 } from "lucide-react";
+import { Users, TrendingUp, TrendingDown, Landmark, Building2, Loader2 } from "lucide-react";
 
 export function DiretoriaDashboardTab() {
   const { data: kpis, isLoading } = useKpisDiretoria();

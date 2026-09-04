@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, redirect, Link, useNavigate, useLocation, useMatches } from "@tanstack/react-router";
+import { createFileRoute, Outlet, Link, useNavigate, useLocation, useMatches } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useProfile, useRole, useModulos } from "@/hooks/use-auth";

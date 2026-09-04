@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useContasBancarias, useTransacoes } from "@/hooks/use-financeiro";
-import { DollarSign, ArrowUpRight, ArrowDownRight, Building, Loader2 } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Building, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function FinanceiroDashboardTab() {

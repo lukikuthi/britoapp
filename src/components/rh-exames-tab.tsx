@@ -7,7 +7,18 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2, ShieldCheck, FileText } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
+const EXAME_INITIAL = { funcionario_id: "", tipo_exame: "periodico", data_realizacao: "", data_vencimento: "" };
+const NR_INITIAL = { funcionario_id: "", norma: "", carga_horaria: 8, data_realizacao: "", data_vencimento: "" };
+
+/** Corrige o bug de fuso horário: "2024-01-15" exibido como 14/01 no Brasil */
+function formatDateBR(dateStr: string) {
+  if (!dateStr) return "—";
+  const [y, m, d] = dateStr.split("-");
+  return `${d}/${m}/${y}`;
+}
 
 export function RhExamesTab() {
   const { data: exames, isLoading: loadExames } = useExames();
@@ -20,17 +31,20 @@ export function RhExamesTab() {
   const [openExame, setOpenExame] = useState(false);
   const [openNR, setOpenNR] = useState(false);
 
-  const [exameForm, setExameForm] = useState({ funcionario_id: "", tipo_exame: "periodico", data_realizacao: "", data_vencimento: "" });
-  const [nrForm, setNrForm] = useState({ funcionario_id: "", norma: "", carga_horaria: 8, data_realizacao: "", data_vencimento: "" });
+  const [exameForm, setExameForm] = useState(EXAME_INITIAL);
+  const [nrForm, setNrForm] = useState(NR_INITIAL);
 
   const handleAddExame = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!exameForm.funcionario_id) { toast.error("Selecione um funcionário"); return; }
     await addExame.mutateAsync(exameForm);
     setOpenExame(false);
   };
 
   const handleAddNR = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!nrForm.funcionario_id) { toast.error("Selecione um funcionário"); return; }
+    if (isNaN(nrForm.carga_horaria) || nrForm.carga_horaria <= 0) { toast.error("Carga horária inválida"); return; }
     await addNR.mutateAsync(nrForm);
     setOpenNR(false);
   };
@@ -47,7 +61,7 @@ export function RhExamesTab() {
               <CardTitle>Exames Ocupacionais (ASO)</CardTitle>
               <CardDescription>Histórico e validade de exames</CardDescription>
             </div>
-            <Dialog open={openExame} onOpenChange={setOpenExame}>
+            <Dialog open={openExame} onOpenChange={(v) => { setOpenExame(v); if (!v) setExameForm(EXAME_INITIAL); }}>
               <DialogTrigger asChild>
                 <Button size="sm"><Plus className="size-4 mr-1" /> Registrar</Button>
               </DialogTrigger>
@@ -56,7 +70,7 @@ export function RhExamesTab() {
                 <form onSubmit={handleAddExame} className="space-y-4">
                   <div className="space-y-2">
                     <Label>Funcionário</Label>
-                    <Select required onValueChange={(v) => setExameForm({...exameForm, funcionario_id: v})}>
+                    <Select value={exameForm.funcionario_id || undefined} onValueChange={(v) => setExameForm({...exameForm, funcionario_id: v})}>
                       <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                       <SelectContent>
                         {funcionarios?.map(f => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
@@ -94,8 +108,9 @@ export function RhExamesTab() {
           <CardContent>
             {loadExames ? <Loader2 className="size-5 animate-spin text-muted-foreground mx-auto my-4" /> : (
               <div className="space-y-3 mt-4">
+                {!exames?.length && <p className="text-center text-muted-foreground text-sm py-4">Nenhum exame registrado.</p>}
                 {exames?.map(ex => {
-                  const isVencido = new Date(ex.data_vencimento) < new Date();
+                  const isVencido = ex.data_vencimento < new Date().toISOString().split('T')[0];
                   return (
                     <div key={ex.id} className="flex justify-between items-center p-3 border rounded-md text-sm">
                       <div>
@@ -104,7 +119,7 @@ export function RhExamesTab() {
                       </div>
                       <div className="text-right flex flex-col items-end gap-1">
                         <Badge variant={isVencido ? "destructive" : "outline"} className={isVencido ? "" : "text-emerald-600 border-emerald-200"}>
-                          Vence: {new Date(ex.data_vencimento).toLocaleDateString()}
+                          Vence: {formatDateBR(ex.data_vencimento)}
                         </Badge>
                       </div>
                     </div>
@@ -122,7 +137,7 @@ export function RhExamesTab() {
               <CardTitle>Treinamentos e NRs</CardTitle>
               <CardDescription>Controle de certificações exigidas</CardDescription>
             </div>
-            <Dialog open={openNR} onOpenChange={setOpenNR}>
+            <Dialog open={openNR} onOpenChange={(v) => { setOpenNR(v); if (!v) setNrForm(NR_INITIAL); }}>
               <DialogTrigger asChild>
                 <Button size="sm" variant="secondary"><Plus className="size-4 mr-1" /> Registrar</Button>
               </DialogTrigger>
@@ -131,7 +146,7 @@ export function RhExamesTab() {
                 <form onSubmit={handleAddNR} className="space-y-4">
                   <div className="space-y-2">
                     <Label>Funcionário</Label>
-                    <Select required onValueChange={(v) => setNrForm({...nrForm, funcionario_id: v})}>
+                    <Select value={nrForm.funcionario_id || undefined} onValueChange={(v) => setNrForm({...nrForm, funcionario_id: v})}>
                       <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                       <SelectContent>
                         {funcionarios?.map(f => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
@@ -145,7 +160,7 @@ export function RhExamesTab() {
                     </div>
                     <div className="space-y-2">
                       <Label>Carga Horária</Label>
-                      <Input type="number" required value={nrForm.carga_horaria} onChange={e => setNrForm({...nrForm, carga_horaria: parseInt(e.target.value)})} />
+                      <Input type="number" min="1" required value={nrForm.carga_horaria} onChange={e => setNrForm({...nrForm, carga_horaria: parseInt(e.target.value) || 0})} />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -166,8 +181,9 @@ export function RhExamesTab() {
           <CardContent>
             {loadNRs ? <Loader2 className="size-5 animate-spin text-muted-foreground mx-auto my-4" /> : (
               <div className="space-y-3 mt-4">
+                {!nrs?.length && <p className="text-center text-muted-foreground text-sm py-4">Nenhum treinamento registrado.</p>}
                 {nrs?.map(nr => {
-                  const isVencido = new Date(nr.data_vencimento) < new Date();
+                  const isVencido = nr.data_vencimento < new Date().toISOString().split('T')[0];
                   return (
                     <div key={nr.id} className="flex justify-between items-center p-3 border rounded-md text-sm">
                       <div>
@@ -176,7 +192,7 @@ export function RhExamesTab() {
                       </div>
                       <div className="text-right flex flex-col items-end gap-1">
                         <Badge variant={isVencido ? "destructive" : "outline"} className={isVencido ? "" : "text-blue-600 border-blue-200"}>
-                          Vence: {new Date(nr.data_vencimento).toLocaleDateString()}
+                          Vence: {formatDateBR(nr.data_vencimento)}
                         </Badge>
                       </div>
                     </div>

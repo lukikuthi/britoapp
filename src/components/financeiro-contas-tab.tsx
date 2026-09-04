@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTransacoes, useAdicionarTransacao, useAtualizarStatusTransacao, useContasBancarias } from "@/hooks/use-financeiro";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,24 +10,36 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, CheckCircle, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const FORM_INITIAL = {
+  tipo: "pagar",
+  descricao: "",
+  fornecedor_cliente: "",
+  valor: 0,
+  data_vencimento: "",
+  obra_id: "matriz",
+  status: "pendente"
+};
+
+function formatDateBR(dateStr: string) {
+  if (!dateStr) return "—";
+  const [y, m, d] = dateStr.split("-");
+  return `${d}/${m}/${y}`;
+}
 
 export function FinanceiroContasTab() {
-  const { data: transacoes, isLoading } = useTransacoes();
   const { data: bancos } = useContasBancarias();
   const addTransacao = useAdicionarTransacao();
   const atualizarStatus = useAtualizarStatusTransacao();
   
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
-    tipo: "pagar",
-    descricao: "",
-    fornecedor_cliente: "",
-    valor: 0,
-    data_vencimento: "",
-    obra_id: "matriz",
-    status: "pendente"
-  });
+  const [filtroTipo, setFiltroTipo] = useState<string>("todas");
+  const [form, setForm] = useState(FORM_INITIAL);
+
+  // Query com filtro dinâmico real
+  const tipoQuery = filtroTipo === "todas" ? undefined : filtroTipo as 'pagar' | 'receber';
+  const { data: transacoes, isLoading } = useTransacoes(tipoQuery);
 
   const { data: obras } = useQuery({
     queryKey: ["todas-obras"],
@@ -39,8 +51,11 @@ export function FinanceiroContasTab() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const valor = Math.max(0, form.valor);
+    if (valor <= 0) return;
     await addTransacao.mutateAsync({
       ...form,
+      valor,
       obra_id: form.obra_id === "matriz" ? null : form.obra_id
     });
     setOpen(false);
@@ -60,6 +75,8 @@ export function FinanceiroContasTab() {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   };
 
+  const today = new Date().toISOString().split('T')[0];
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-7xl">
       <div className="flex justify-between items-center">
@@ -67,7 +84,7 @@ export function FinanceiroContasTab() {
           <h2 className="text-xl font-semibold">Lançamentos (Pagar & Receber)</h2>
           <p className="text-sm text-muted-foreground">Gestão de faturas e recebimentos</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setForm(FORM_INITIAL); }}>
           <DialogTrigger asChild>
             <Button><Plus className="mr-2 h-4 w-4" /> Novo Lançamento</Button>
           </DialogTrigger>
@@ -87,7 +104,7 @@ export function FinanceiroContasTab() {
                 </div>
                 <div className="space-y-2">
                   <Label>Valor (R$)</Label>
-                  <Input type="number" step="0.01" required value={form.valor} onChange={e => setForm({...form, valor: parseFloat(e.target.value)})} />
+                  <Input type="number" step="0.01" min="0.01" required value={form.valor || ""} onChange={e => setForm({...form, valor: parseFloat(e.target.value) || 0})} />
                 </div>
               </div>
               <div className="space-y-2">
@@ -101,7 +118,7 @@ export function FinanceiroContasTab() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Centro de Custo</Label>
-                  <Select required onValueChange={(v) => setForm({...form, obra_id: v})}>
+                  <Select value={form.obra_id} onValueChange={(v) => setForm({...form, obra_id: v})}>
                     <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="matriz">Despesa Geral / Matriz</SelectItem>
@@ -122,7 +139,8 @@ export function FinanceiroContasTab() {
         </Dialog>
       </div>
 
-      <Tabs defaultValue="todas" className="w-full">
+      {/* Filtro funcional de abas */}
+      <Tabs value={filtroTipo} onValueChange={setFiltroTipo} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="todas">Todas</TabsTrigger>
           <TabsTrigger value="pagar">A Pagar</TabsTrigger>
@@ -136,63 +154,64 @@ export function FinanceiroContasTab() {
             ) : !transacoes?.length ? (
               <div className="text-center p-12 text-muted-foreground">Nenhuma transação financeira registrada.</div>
             ) : (
-              <table className="w-full text-sm text-left">
-                <thead className="bg-muted text-muted-foreground border-b">
-                  <tr>
-                    <th className="p-4 font-medium">Data/Vencimento</th>
-                    <th className="p-4 font-medium">Fornecedor / Cliente</th>
-                    <th className="p-4 font-medium">Descrição</th>
-                    <th className="p-4 font-medium text-right">Valor</th>
-                    <th className="p-4 font-medium text-center">Status</th>
-                    <th className="p-4 font-medium text-right">Ação</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {transacoes.map(t => {
-                    const isPagar = t.tipo === 'pagar';
-                    const isVencido = t.status === 'pendente' && new Date(t.data_vencimento) < new Date();
-                    return (
-                      <tr key={t.id} className="hover:bg-muted/50 transition-colors">
-                        <td className="p-4 text-muted-foreground">
-                          {new Date(t.data_vencimento).toLocaleDateString()}
-                          {isVencido && <span className="block text-[10px] text-red-500 font-bold uppercase">Atrasado</span>}
-                        </td>
-                        <td className="p-4 font-medium">
-                          {t.fornecedor_cliente}
-                          <span className="block text-xs text-muted-foreground font-normal">{t.obra?.nome || 'Matriz'}</span>
-                        </td>
-                        <td className="p-4 text-muted-foreground">{t.descricao}</td>
-                        <td className={`p-4 text-right font-medium ${isPagar ? 'text-red-600' : 'text-emerald-600'}`}>
-                          {isPagar ? '-' : '+'}{formatCurrency(t.valor)}
-                        </td>
-                        <td className="p-4 text-center">
-                          <Badge variant={t.status === 'pago' ? "default" : t.status === 'pendente' ? "outline" : "destructive"}
-                                 className={t.status === 'pago' ? "bg-emerald-500" : t.status === 'pendente' ? (isVencido ? "border-red-500 text-red-600" : "text-amber-600 border-amber-300") : ""}>
-                            {t.status.toUpperCase()}
-                          </Badge>
-                        </td>
-                        <td className="p-4 text-right">
-                          {t.status === 'pendente' && (
-                            <Button 
-                              size="sm" 
-                              variant={isPagar ? "outline" : "default"} 
-                              className={isPagar ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50" : "bg-emerald-600 hover:bg-emerald-700"}
-                              onClick={() => {
-                                // Para acelerar visualmente, vou pegar o primeiro banco da lista como default
-                                const contaBase = bancos?.[0]?.id || null;
-                                handlePagar(t.id, contaBase);
-                              }}
-                              disabled={atualizarStatus.isPending}
-                            >
-                              <CheckCircle className="size-4 mr-1" /> {isPagar ? 'Pagar' : 'Receber'}
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-muted text-muted-foreground border-b">
+                    <tr>
+                      <th className="p-4 font-medium">Data/Vencimento</th>
+                      <th className="p-4 font-medium">Fornecedor / Cliente</th>
+                      <th className="p-4 font-medium">Descrição</th>
+                      <th className="p-4 font-medium text-right">Valor</th>
+                      <th className="p-4 font-medium text-center">Status</th>
+                      <th className="p-4 font-medium text-right">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {transacoes.map(t => {
+                      const isPagar = t.tipo === 'pagar';
+                      const isVencido = t.status === 'pendente' && t.data_vencimento < today;
+                      return (
+                        <tr key={t.id} className="hover:bg-muted/50 transition-colors">
+                          <td className="p-4 text-muted-foreground">
+                            {formatDateBR(t.data_vencimento)}
+                            {isVencido && <span className="block text-[10px] text-red-500 font-bold uppercase">Atrasado</span>}
+                          </td>
+                          <td className="p-4 font-medium">
+                            {t.fornecedor_cliente}
+                            <span className="block text-xs text-muted-foreground font-normal">{t.obra?.nome || 'Matriz'}</span>
+                          </td>
+                          <td className="p-4 text-muted-foreground">{t.descricao}</td>
+                          <td className={`p-4 text-right font-medium ${isPagar ? 'text-red-600' : 'text-emerald-600'}`}>
+                            {isPagar ? '-' : '+'}{formatCurrency(t.valor)}
+                          </td>
+                          <td className="p-4 text-center">
+                            <Badge variant={t.status === 'pago' ? "default" : t.status === 'pendente' ? "outline" : "destructive"}
+                                   className={t.status === 'pago' ? "bg-emerald-500" : t.status === 'pendente' ? (isVencido ? "border-red-500 text-red-600" : "text-amber-600 border-amber-300") : ""}>
+                              {t.status.toUpperCase()}
+                            </Badge>
+                          </td>
+                          <td className="p-4 text-right">
+                            {t.status === 'pendente' && (
+                              <Button 
+                                size="sm" 
+                                variant={isPagar ? "outline" : "default"} 
+                                className={isPagar ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50" : "bg-emerald-600 hover:bg-emerald-700"}
+                                onClick={() => {
+                                  const contaBase = bancos?.[0]?.id || null;
+                                  handlePagar(t.id, contaBase);
+                                }}
+                                disabled={atualizarStatus.isPending}
+                              >
+                                <CheckCircle className="size-4 mr-1" /> {isPagar ? 'Pagar' : 'Receber'}
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </CardContent>
         </Card>

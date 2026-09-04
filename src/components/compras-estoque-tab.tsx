@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useEstoque, useAdicionarItem } from "@/hooks/use-compras";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,19 +11,15 @@ import { Plus, Search, Loader2, Wrench, Package, HardHat } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+const FORM_INITIAL = { nome: "", tipo: "material", obra_id: "matriz", quantidade_atual: 0, limite_minimo: 0 };
+
 export function ComprasEstoqueTab() {
   const { data: estoque, isLoading } = useEstoque();
   const addItem = useAdicionarItem();
   
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [form, setForm] = useState({
-    nome: "",
-    tipo: "material",
-    obra_id: "",
-    quantidade_atual: 0,
-    limite_minimo: 0
-  });
+  const [form, setForm] = useState(FORM_INITIAL);
 
   const { data: obras } = useQuery({
     queryKey: ["todas-obras"],
@@ -37,7 +33,9 @@ export function ComprasEstoqueTab() {
     e.preventDefault();
     await addItem.mutateAsync({
       ...form,
-      obra_id: form.obra_id === "matriz" ? null : form.obra_id
+      obra_id: form.obra_id === "matriz" ? null : form.obra_id,
+      quantidade_atual: Math.max(0, form.quantidade_atual),
+      limite_minimo: Math.max(0, form.limite_minimo)
     });
     setOpen(false);
   };
@@ -61,12 +59,13 @@ export function ComprasEstoqueTab() {
             type="search"
             placeholder="Buscar item no estoque..."
             className="pl-8"
+            aria-label="Buscar item no estoque"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setForm(FORM_INITIAL); }}>
           <DialogTrigger asChild>
             <Button><Plus className="mr-2 h-4 w-4" /> Novo Item</Button>
           </DialogTrigger>
@@ -93,7 +92,7 @@ export function ComprasEstoqueTab() {
                 </div>
                 <div className="space-y-2">
                   <Label>Alocação (Obra)</Label>
-                  <Select required onValueChange={(v) => setForm({...form, obra_id: v})}>
+                  <Select value={form.obra_id} onValueChange={(v) => setForm({...form, obra_id: v})}>
                     <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="matriz">Depósito / Matriz</SelectItem>
@@ -105,11 +104,11 @@ export function ComprasEstoqueTab() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Quantidade Inicial</Label>
-                  <Input type="number" required value={form.quantidade_atual} onChange={e => setForm({...form, quantidade_atual: Number(e.target.value)})} />
+                  <Input type="number" min="0" required value={form.quantidade_atual} onChange={e => setForm({...form, quantidade_atual: Number(e.target.value) || 0})} />
                 </div>
                 <div className="space-y-2">
                   <Label>Limite Mínimo (Alerta)</Label>
-                  <Input type="number" required value={form.limite_minimo} onChange={e => setForm({...form, limite_minimo: Number(e.target.value)})} />
+                  <Input type="number" min="0" required value={form.limite_minimo} onChange={e => setForm({...form, limite_minimo: Number(e.target.value) || 0})} />
                 </div>
               </div>
               <Button type="submit" className="w-full" disabled={addItem.isPending}>
@@ -128,7 +127,7 @@ export function ComprasEstoqueTab() {
           ) : !filtered?.length ? (
             <div className="text-center p-12 text-muted-foreground">Nenhum item cadastrado no estoque.</div>
           ) : (
-            <div className="rounded-md border overflow-hidden">
+            <div className="rounded-md border overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead className="bg-muted text-muted-foreground">
                   <tr>

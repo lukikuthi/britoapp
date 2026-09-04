@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useCaixaEntradaDiretoria, useResponderMensagem } from "@/hooks/use-diretoria";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, Reply, CheckCircle2, Inbox } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 

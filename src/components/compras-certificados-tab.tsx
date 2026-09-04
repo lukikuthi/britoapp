@@ -1,29 +1,34 @@
 import { useState } from "react";
 import { useCertificados, useEstoque, useAdicionarCertificado } from "@/hooks/use-compras";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, ShieldAlert, FileCheck, Loader2 } from "lucide-react";
+import { Plus, FileCheck, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
+const FORM_INITIAL = { item_id: "", numero_certificado: "", data_emissao: "", data_vencimento: "" };
+
+function formatDateBR(dateStr: string) {
+  if (!dateStr) return "—";
+  const [y, m, d] = dateStr.split("-");
+  return `${d}/${m}/${y}`;
+}
 
 export function ComprasCertificadosTab() {
   const { data: certificados, isLoading } = useCertificados();
-  const { data: estoque } = useEstoque(); // Para selecionar qual item recebe o certificado
+  const { data: estoque } = useEstoque();
   const addCert = useAdicionarCertificado();
 
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
-    item_id: "",
-    numero_certificado: "",
-    data_emissao: "",
-    data_vencimento: ""
-  });
+  const [form, setForm] = useState(FORM_INITIAL);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.item_id) { toast.error("Selecione um equipamento"); return; }
     await addCert.mutateAsync(form);
     setOpen(false);
   };
@@ -37,7 +42,7 @@ export function ComprasCertificadosTab() {
           <h2 className="text-xl font-semibold">Certificados e Calibração</h2>
           <p className="text-sm text-muted-foreground">Monitoramento de laudos de equipamentos e EPIs</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setForm(FORM_INITIAL); }}>
           <DialogTrigger asChild>
             <Button><Plus className="mr-2 h-4 w-4" /> Novo Certificado</Button>
           </DialogTrigger>
@@ -46,7 +51,7 @@ export function ComprasCertificadosTab() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label>Equipamento / EPI</Label>
-                <Select required onValueChange={(v) => setForm({...form, item_id: v})}>
+                <Select value={form.item_id || undefined} onValueChange={(v) => setForm({...form, item_id: v})}>
                   <SelectTrigger><SelectValue placeholder="Selecione o equipamento..." /></SelectTrigger>
                   <SelectContent>
                     {ferramentasEEpis.map(item => (
@@ -87,43 +92,45 @@ export function ComprasCertificadosTab() {
               Nenhum certificado registrado no sistema.
             </div>
           ) : (
-            <table className="w-full text-sm text-left">
-              <thead className="bg-muted text-muted-foreground border-b">
-                <tr>
-                  <th className="p-4 font-medium">Equipamento</th>
-                  <th className="p-4 font-medium">Nº Certificado</th>
-                  <th className="p-4 font-medium">Emissão</th>
-                  <th className="p-4 font-medium">Vencimento</th>
-                  <th className="p-4 font-medium text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {certificados.map(c => {
-                  const hoje = new Date();
-                  const venc = new Date(c.data_vencimento);
-                  const limite10Dias = new Date();
-                  limite10Dias.setDate(hoje.getDate() + 10);
-                  
-                  const isVencido = venc < hoje;
-                  const isCritico = venc <= limite10Dias && !isVencido;
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-muted text-muted-foreground border-b">
+                  <tr>
+                    <th className="p-4 font-medium">Equipamento</th>
+                    <th className="p-4 font-medium">Nº Certificado</th>
+                    <th className="p-4 font-medium">Emissão</th>
+                    <th className="p-4 font-medium">Vencimento</th>
+                    <th className="p-4 font-medium text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {certificados.map(c => {
+                    const today = new Date().toISOString().split('T')[0];
+                    const limit10 = new Date();
+                    limit10.setDate(limit10.getDate() + 10);
+                    const limit10Str = limit10.toISOString().split('T')[0];
+                    
+                    const isVencido = c.data_vencimento < today;
+                    const isCritico = c.data_vencimento <= limit10Str && !isVencido;
 
-                  return (
-                    <tr key={c.id} className="hover:bg-muted/50 transition-colors">
-                      <td className="p-4 font-medium">{c.item?.nome}</td>
-                      <td className="p-4">{c.numero_certificado}</td>
-                      <td className="p-4 text-muted-foreground">{new Date(c.data_emissao).toLocaleDateString()}</td>
-                      <td className="p-4 font-semibold">{new Date(c.data_vencimento).toLocaleDateString()}</td>
-                      <td className="p-4 text-right">
-                        <Badge variant={isVencido ? "destructive" : isCritico ? "outline" : "secondary"} 
-                               className={isCritico ? "text-amber-600 border-amber-300 bg-amber-50" : isVencido ? "" : "bg-emerald-100 text-emerald-800"}>
-                          {isVencido ? "Vencido" : isCritico ? "Vence em breve" : "Válido"}
-                        </Badge>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                    return (
+                      <tr key={c.id} className="hover:bg-muted/50 transition-colors">
+                        <td className="p-4 font-medium">{c.item?.nome}</td>
+                        <td className="p-4">{c.numero_certificado}</td>
+                        <td className="p-4 text-muted-foreground">{formatDateBR(c.data_emissao)}</td>
+                        <td className="p-4 font-semibold">{formatDateBR(c.data_vencimento)}</td>
+                        <td className="p-4 text-right">
+                          <Badge variant={isVencido ? "destructive" : isCritico ? "outline" : "secondary"} 
+                                 className={isCritico ? "text-amber-600 border-amber-300 bg-amber-50" : isVencido ? "" : "bg-emerald-100 text-emerald-800"}>
+                            {isVencido ? "Vencido" : isCritico ? "Vence em breve" : "Válido"}
+                          </Badge>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardContent>
       </Card>

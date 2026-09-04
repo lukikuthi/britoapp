@@ -7,22 +7,18 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Landmark, Loader2 } from "lucide-react";
 
+const FORM_INITIAL = { nome_banco: "", titular: "", agencia: "", conta: "", saldo_atual: 0 };
+
 export function FinanceiroBancosTab() {
   const { data: contas, isLoading } = useContasBancarias();
   const addConta = useAdicionarContaBancaria();
   
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
-    nome_banco: "",
-    titular: "",
-    agencia: "",
-    conta: "",
-    saldo_atual: 0
-  });
+  const [form, setForm] = useState(FORM_INITIAL);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await addConta.mutateAsync(form);
+    await addConta.mutateAsync({ ...form, saldo_atual: form.saldo_atual || 0 });
     setOpen(false);
   };
 
@@ -37,7 +33,7 @@ export function FinanceiroBancosTab() {
           <h2 className="text-xl font-semibold">Contas Bancárias e Saldos</h2>
           <p className="text-sm text-muted-foreground">Gestão de caixas e contas da construtora</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setForm(FORM_INITIAL); }}>
           <DialogTrigger asChild>
             <Button><Plus className="mr-2 h-4 w-4" /> Nova Conta</Button>
           </DialogTrigger>
@@ -64,7 +60,7 @@ export function FinanceiroBancosTab() {
               </div>
               <div className="space-y-2">
                 <Label>Saldo Inicial (R$)</Label>
-                <Input type="number" step="0.01" required value={form.saldo_atual} onChange={e => setForm({...form, saldo_atual: parseFloat(e.target.value)})} />
+                <Input type="number" step="0.01" required value={form.saldo_atual || ""} onChange={e => setForm({...form, saldo_atual: parseFloat(e.target.value) || 0})} />
               </div>
               <Button type="submit" className="w-full" disabled={addConta.isPending}>
                 {addConta.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Adicionar

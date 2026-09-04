@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useEstoque, useCertificados, useBoletos } from "@/hooks/use-compras";
-import { PackageOpen, FileText, AlertTriangle, ShieldAlert } from "lucide-react";
+import { PackageOpen, FileText, ShieldAlert } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 

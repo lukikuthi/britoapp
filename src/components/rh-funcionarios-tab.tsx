@@ -5,9 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, UserX, Loader2, Search, FileText } from "lucide-react";
+import { Plus, Loader2, Search } from "lucide-react";
+
+function formatDateBR(dateStr: string) {
+  if (!dateStr) return "—";
+  const [y, m, d] = dateStr.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+const FORM_INITIAL: Partial<Funcionario> = {
+  nome: "",
+  cpf: "",
+  cargo: "",
+  status: "ativo",
+  data_admissao: new Date().toISOString().split("T")[0],
+  salario: 0,
+};
 
 export function RhFuncionariosTab() {
   const { data: funcionarios, isLoading } = useFuncionarios();
@@ -15,14 +29,7 @@ export function RhFuncionariosTab() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const [form, setForm] = useState<Partial<Funcionario>>({
-    nome: "",
-    cpf: "",
-    cargo: "",
-    status: "ativo",
-    data_admissao: new Date().toISOString().split("T")[0],
-    salario: 0,
-  });
+  const [form, setForm] = useState<Partial<Funcionario>>(FORM_INITIAL);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,12 +48,13 @@ export function RhFuncionariosTab() {
             type="search"
             placeholder="Buscar funcionário..."
             className="pl-8"
+            aria-label="Buscar funcionário"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setForm(FORM_INITIAL); }}>
           <DialogTrigger asChild>
             <Button><Plus className="mr-2 h-4 w-4" /> Novo Funcionário</Button>
           </DialogTrigger>
@@ -76,7 +84,7 @@ export function RhFuncionariosTab() {
                 </div>
                 <div className="space-y-2">
                   <Label>Salário (R$)</Label>
-                  <Input type="number" step="0.01" value={form.salario || ""} onChange={e => setForm({...form, salario: parseFloat(e.target.value)})} />
+                  <Input type="number" step="0.01" min="0" value={form.salario || ""} onChange={e => setForm({...form, salario: parseFloat(e.target.value) || 0})} />
                 </div>
               </div>
               <Button type="submit" className="w-full" disabled={addFunc.isPending}>
@@ -98,7 +106,7 @@ export function RhFuncionariosTab() {
           ) : !filtered?.length ? (
             <div className="text-center p-8 text-muted-foreground">Nenhum funcionário encontrado.</div>
           ) : (
-            <div className="rounded-md border overflow-hidden">
+            <div className="rounded-md border overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead className="bg-muted text-muted-foreground">
                   <tr>
@@ -106,7 +114,6 @@ export function RhFuncionariosTab() {
                     <th className="p-3 font-medium">Cargo</th>
                     <th className="p-3 font-medium">Status</th>
                     <th className="p-3 font-medium">Admissão</th>
-                    <th className="p-3 font-medium text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -119,12 +126,7 @@ export function RhFuncionariosTab() {
                           {f.status}
                         </Badge>
                       </td>
-                      <td className="p-3">{new Date(f.data_admissao).toLocaleDateString()}</td>
-                      <td className="p-3 text-right">
-                        <Button variant="ghost" size="sm" className="h-8 px-2 text-primary">
-                          <FileText className="h-4 w-4 mr-1" /> Ficha
-                        </Button>
-                      </td>
+                      <td className="p-3">{formatDateBR(f.data_admissao)}</td>
                     </tr>
                   ))}
                 </tbody>
