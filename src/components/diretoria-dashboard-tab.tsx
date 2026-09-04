@@ -17,6 +17,12 @@ export function DiretoriaDashboardTab() {
     );
   }
 
+  const getStatusColor = (status: string) => {
+    if (status === 'Atrasada' || status.includes('Vencidos') || status === 'Vazio') return 'bg-red-100 text-red-700';
+    if (status === 'Atenção') return 'bg-amber-100 text-amber-700';
+    return 'bg-emerald-100 text-emerald-700';
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       
@@ -96,15 +102,21 @@ export function DiretoriaDashboardTab() {
           <CardContent className="space-y-4">
             <div className="p-4 bg-muted/50 rounded-lg flex justify-between items-center">
               <span className="font-medium text-sm">Status das Obras</span>
-              <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full font-semibold uppercase">Dentro do Prazo</span>
+              <span className={`text-xs px-2 py-1 rounded-full font-semibold uppercase ${getStatusColor(kpis?.painel?.obras || 'Controlado')}`}>
+                {kpis?.painel?.obras || 'Controlado'}
+              </span>
             </div>
             <div className="p-4 bg-muted/50 rounded-lg flex justify-between items-center">
               <span className="font-medium text-sm">Riscos (SESMT / RH)</span>
-              <span className="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full font-semibold uppercase">Controlado</span>
+              <span className={`text-xs px-2 py-1 rounded-full font-semibold uppercase ${getStatusColor(kpis?.painel?.riscos || 'Controlado')}`}>
+                {kpis?.painel?.riscos || 'Controlado'}
+              </span>
             </div>
             <div className="p-4 bg-muted/50 rounded-lg flex justify-between items-center">
               <span className="font-medium text-sm">Estoque / Suprimentos</span>
-              <span className="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded-full font-semibold uppercase">Atenção</span>
+              <span className={`text-xs px-2 py-1 rounded-full font-semibold uppercase ${getStatusColor(kpis?.painel?.estoque || 'Controlado')}`}>
+                {kpis?.painel?.estoque || 'Adequado'}
+              </span>
             </div>
           </CardContent>
         </Card>

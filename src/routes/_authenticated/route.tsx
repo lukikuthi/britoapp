@@ -65,6 +65,9 @@ function AuthenticatedLayout() {
 
   let mainNav = [];
   
+  // SEMPRE exibe o Hub no topo da sidebar
+  mainNav.push({ to: "/hub", label: "Hub de Módulos", icon: LayoutDashboard, show: true });
+  
   if (userModulos.includes("obras")) {
     mainNav.push({ to: "/dashboard", label: "Dashboard (Obras)", icon: LayoutDashboard, show: true });
     mainNav.push({ to: "/calendar", label: "Calendário", icon: Calendar, show: true });
