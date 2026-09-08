@@ -62,8 +62,32 @@ export function useAdicionarTransacao() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (novo: any) => {
+      // Regra de negócios: Despesas acima de 5000 precisam de aprovação da diretoria
+      if (novo.tipo === 'pagar' && novo.valor >= 5000) {
+        novo.status_aprovacao = 'pendente';
+      } else {
+        novo.status_aprovacao = 'nao_requerida';
+      }
+      
       const { data, error } = await supabase.from("fin_transacoes").insert(novo).select().single();
       if (error) throw error;
+      
+      // Se precisar de aprovação, avisa a diretoria
+      if (novo.status_aprovacao === 'pendente') {
+        await supabase.from("mensagens_setor").insert({
+          de_modulo: 'financeiro',
+          para_modulo: 'diretoria',
+          mensagem: `Solicitação automática de aprovação de pagamento: ${novo.fornecedor_cliente} (R$ ${novo.valor}). ID da Transação: ${data.id}`
+        });
+        
+        await supabase.from("notificacoes").insert({
+          modulo_alvo: 'diretoria',
+          titulo: 'Aprovação Financeira Pendente',
+          mensagem: `Nova despesa de R$ ${novo.valor} aguardando aprovação.`,
+          link_url: '/diretoria?tab=aprovacoes'
+        });
+      }
+      
       return data;
     },
     onSuccess: () => {
@@ -77,14 +101,16 @@ export function useAdicionarTransacao() {
 export function useAtualizarStatusTransacao() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, status, data_pagamento, conta_id, valor_pago }: { id: string, status: string, data_pagamento?: string, conta_id?: string, valor_pago?: number }) => {
-      const updates: any = { status };
-      if (data_pagamento) updates.data_pagamento = data_pagamento;
-      if (conta_id) updates.conta_bancaria_id = conta_id;
-      if (valor_pago !== undefined) updates.valor_pago = valor_pago;
-      
-      const { error } = await supabase.from("fin_transacoes").update(updates).eq("id", id);
+    mutationFn: async ({ id, status, valor_pago, data_pagamento, conta_id, anexo_nf_url }: { id: string, status: string, valor_pago?: number, data_pagamento?: string, conta_id?: string, anexo_nf_url?: string }) => {
+      const payload: any = { status };
+      if (valor_pago !== undefined) payload.valor_pago = valor_pago;
+      if (data_pagamento !== undefined) payload.data_pagamento = data_pagamento;
+      if (conta_id !== undefined) payload.conta_bancaria_id = conta_id;
+      if (anexo_nf_url !== undefined) payload.anexo_nf_url = anexo_nf_url;
+
+      const { data, error } = await supabase.from("fin_transacoes").update(payload).eq("id", id).select().single();
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       toast.success("Pagamento/Status atualizado!");

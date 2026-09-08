@@ -403,6 +403,7 @@ function ItemDetailDialog({
     createMedicao.mutate(
       {
         item_id: item.id,
+        item_descricao: item.descricao,
         numero_medicao: nextNum,
         data_referencia: ref || `MEDIÇÃO ${nextNum}`,
         quantidade_executada: val,

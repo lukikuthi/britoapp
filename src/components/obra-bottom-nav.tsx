@@ -2,22 +2,23 @@ import { useNavigate } from "@tanstack/react-router";
 import { LayoutGrid, MapPin, Menu, Camera, FileText, Activity, Package, FileCheck, HardHat, BarChart3, Ruler } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type ObraTab = "visao" | "analytics" | "mapa" | "rdo" | "fotografia" | "menu" | "laudos" | "cronograma" | "concretagem" | "fvr" | "rnc" | "bm" | "medicao" | "requisicoes";
-
-interface ObraBottomNavProps {
-  obraId: string;
-  active: ObraTab;
-}
-
-const tabs: { id: ObraTab; label: string; icon: any; search: { tab: ObraTab } }[] = [
-  { id: "visao", label: "Visão", icon: Activity, search: { tab: "visao" } },
-  { id: "rdo", label: "RDO", icon: FileText, search: { tab: "rdo" } },
-  { id: "laudos", label: "Laudos", icon: FileCheck, search: { tab: "laudos" } },
-  { id: "cronograma", label: "Gantt", icon: LayoutGrid, search: { tab: "cronograma" } },
-  { id: "requisicoes", label: "Material", icon: Package, search: { tab: "requisicoes" } },
-  { id: "medicao", label: "Medição", icon: Ruler, search: { tab: "medicao" } },
-  { id: "menu", label: "Menu", icon: Menu, search: { tab: "menu" } },
-];
+export type ObraTab = "visao" | "analytics" | "mapa" | "rdo" | "fotografia" | "menu" | "laudos" | "cronograma" | "concretagem" | "fvr" | "rnc" | "bm" | "medicao" | "requisicoes" | "apontamento";
+  
+  interface ObraBottomNavProps {
+    obraId: string;
+    active: ObraTab;
+  }
+  
+  const tabs: { id: ObraTab; label: string; icon: any; search: { tab: ObraTab } }[] = [
+    { id: "visao", label: "Visão", icon: Activity, search: { tab: "visao" } },
+    { id: "rdo", label: "RDO", icon: FileText, search: { tab: "rdo" } },
+    { id: "apontamento", label: "Ponto", icon: HardHat, search: { tab: "apontamento" } },
+    { id: "laudos", label: "Laudos", icon: FileCheck, search: { tab: "laudos" } },
+    { id: "cronograma", label: "Gantt", icon: LayoutGrid, search: { tab: "cronograma" } },
+    { id: "requisicoes", label: "Material", icon: Package, search: { tab: "requisicoes" } },
+    { id: "medicao", label: "Medição", icon: Ruler, search: { tab: "medicao" } },
+    { id: "menu", label: "Menu", icon: Menu, search: { tab: "menu" } },
+  ];
 
 export function ObraBottomNav({ obraId, active }: ObraBottomNavProps) {
   const navigate = useNavigate();

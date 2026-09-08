@@ -11,6 +11,7 @@ import { Plus, CheckCircle, Loader2, MessageSquare, Paperclip, ChevronRight } fr
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { uploadFileToBucket, getPublicFileUrl } from "@/lib/storage-utils";
 
 const FORM_INITIAL = {
   tipo: "pagar",
@@ -244,9 +245,38 @@ function TransacaoDetalhesDialog({ t, bancos, onClose }: { t: any, bancos: any[]
   
   const [novoLog, setNovoLog] = useState("");
   const [pagamentoForm, setPagamentoForm] = useState({ valor: t.valor - (t.valor_pago || 0), conta_id: bancos?.[0]?.id || "" });
+  const [uploading, setUploading] = useState(false);
 
   const isPagar = t.tipo === "pagar";
   const faltante = t.valor - (t.valor_pago || 0);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setUploading(true);
+      const yearStr = t.data_vencimento ? t.data_vencimento.split('-')[0] : 'geral';
+      const path = await uploadFileToBucket("financeiro-anexos", file, `nfs/${yearStr}`);
+      
+      // Update the transaction in database
+      await atualizarStatus.mutateAsync({
+        id: t.id,
+        status: t.status, // keep existing
+        anexo_nf_url: path
+      });
+      
+      await addLog.mutateAsync({
+        transacao_id: t.id,
+        mensagem: `Anexou um novo comprovante/nota fiscal.`
+      });
+      
+      toast.success("Anexo salvo com sucesso!");
+    } catch (err: any) {
+      toast.error(`Erro no upload: ${err.message}`);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handlePagar = async () => {
     if (pagamentoForm.valor <= 0) return;
@@ -301,13 +331,33 @@ function TransacaoDetalhesDialog({ t, bancos, onClose }: { t: any, bancos: any[]
             <Badge variant="outline">Venc: {formatDateBR(t.data_vencimento)}</Badge>
           </div>
 
-          {/* Upload placeholder */}
+          {/* Upload de Anexo Real */}
           <div className="mt-4 border-t pt-4">
-            <h4 className="text-sm font-semibold mb-2 flex items-center"><Paperclip className="size-4 mr-2" /> Comprovante / Nota</h4>
-            <div className="border-2 border-dashed rounded-md p-4 text-center text-sm text-muted-foreground hover:bg-muted/50 cursor-pointer transition-colors">
-              Nenhum arquivo anexado. Clique para enviar PDF ou Imagem.
-              <br/><span className="text-xs opacity-50">(Em breve via Storage)</span>
-            </div>
+            <h4 className="text-sm font-semibold mb-2 flex items-center"><Paperclip className="size-4 mr-2" /> Comprovante / Nota Fiscal</h4>
+            {t.anexo_nf_url ? (
+              <div className="flex items-center gap-4">
+                <a 
+                  href={getPublicFileUrl("financeiro-anexos", t.anexo_nf_url)} 
+                  target="_blank" rel="noreferrer"
+                  className="text-sm text-blue-600 hover:underline font-medium"
+                >
+                  Visualizar Anexo Atual
+                </a>
+                <label className="text-xs text-muted-foreground hover:text-foreground cursor-pointer underline">
+                  Substituir
+                  <input type="file" className="hidden" accept=".pdf,image/*" onChange={handleFileUpload} />
+                </label>
+              </div>
+            ) : (
+              <label className="border-2 border-dashed rounded-md p-4 flex flex-col items-center justify-center text-sm text-muted-foreground hover:bg-muted/50 cursor-pointer transition-colors relative">
+                {uploading ? (
+                  <><Loader2 className="animate-spin size-5 mb-2 text-[var(--brand-gold)]" /> Enviando...</>
+                ) : (
+                  <>Clique para enviar PDF ou Imagem</>
+                )}
+                <input type="file" className="hidden" accept=".pdf,image/*" onChange={handleFileUpload} disabled={uploading} />
+              </label>
+            )}
           </div>
         </div>
 
@@ -369,10 +419,22 @@ function TransacaoDetalhesDialog({ t, bancos, onClose }: { t: any, bancos: any[]
                   </Select>
                 </div>
 
-                <Button className="w-full mt-4" onClick={handlePagar} disabled={atualizarStatus.isPending || pagamentoForm.valor <= 0 || pagamentoForm.valor > faltante}>
-                  {atualizarStatus.isPending ? <Loader2 className="size-4 animate-spin mr-2" /> : <CheckCircle className="size-4 mr-2" />}
-                  Registrar Pagamento
-                </Button>
+                {t.status_aprovacao === 'pendente' && isPagar ? (
+                  <div className="bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 p-4 rounded-md text-center border border-amber-200 mt-4">
+                    <Loader2 className="size-6 mx-auto mb-2 animate-spin" />
+                    <p className="text-sm font-semibold">Aguardando Aprovação da Diretoria</p>
+                    <p className="text-xs mt-1">O pagamento não pode ser liberado até a assinatura do diretor.</p>
+                  </div>
+                ) : t.status_aprovacao === 'recusada' && isPagar ? (
+                  <div className="bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 p-4 rounded-md text-center border border-red-200 mt-4">
+                    <p className="text-sm font-semibold">Pagamento Recusado pela Diretoria</p>
+                  </div>
+                ) : (
+                  <Button className="w-full mt-4" onClick={handlePagar} disabled={atualizarStatus.isPending || pagamentoForm.valor <= 0 || pagamentoForm.valor > faltante}>
+                    {atualizarStatus.isPending ? <Loader2 className="size-4 animate-spin mr-2" /> : <CheckCircle className="size-4 mr-2" />}
+                    Registrar Pagamento
+                  </Button>
+                )}
               </div>
             )}
           </div>

@@ -34,6 +34,7 @@ import { ObraRncTab } from "@/components/obra-rnc-tab";
 import { ObraBmTab } from "@/components/obra-bm-tab";
 import { ObraMedicaoTab } from "@/components/obra-medicao-tab";
 import { ObraRequisicoesTab } from "@/components/obra-requisicoes-tab";
+import { ObraPontoTab } from "@/components/obra-ponto-tab";
 import { useTutorial } from "@/hooks/use-tutorial";
 import { useVisaoGeral } from "@/hooks/use-5-passos";
 import { generateApontamentosPdf } from "@/lib/pdf-apontamentos";
@@ -61,7 +62,7 @@ import { OBRA_STATUS_LABEL } from "@/lib/labels";
 export const Route = createFileRoute("/_authenticated/obras/$obraId")({
   head: () => ({ meta: [{ title: "Obra — BRITO ENGENHARIA" }] }),
   validateSearch: (s: Record<string, unknown>): { tab: ObraTab } => ({
-    tab: (["visao", "analytics", "rdo", "menu", "materiais", "laudos", "sesmt", "cronograma", "concretagem", "fvr", "rnc", "bm", "medicao", "requisicoes"].includes(String(s.tab)) ? s.tab : "visao") as ObraTab,
+    tab: (["visao", "analytics", "rdo", "menu", "materiais", "laudos", "sesmt", "cronograma", "concretagem", "fvr", "rnc", "bm", "medicao", "requisicoes", "apontamento"].includes(String(s.tab)) ? s.tab : "visao") as ObraTab,
   }),
   component: ObraDetail,
 });
@@ -339,6 +340,10 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
 
         {tab === "requisicoes" && (
           <ObraRequisicoesTab obraId={obraId} />
+        )}
+
+        {tab === "apontamento" && (
+          <ObraPontoTab obraId={obraId} />
         )}
 
         {tab === "menu" && (

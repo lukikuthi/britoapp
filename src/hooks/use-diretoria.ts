@@ -102,3 +102,57 @@ export function useResponderMensagem() {
     onError: (e: Error) => toast.error(`Erro: ${e.message}`)
   });
 }
+
+export function usePagamentosPendentes() {
+  return useQuery({
+    queryKey: ["diretoria-pagamentos-pendentes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("fin_transacoes")
+        .select("id, fornecedor_cliente, descricao, valor, data_vencimento, anexo_nf_url")
+        .eq("status_aprovacao", "pendente")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
+export function useAprovarPagamento() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async ({ transacaoId, status, justificativa }: { transacaoId: string, status: 'aprovada'|'recusada', justificativa?: string }) => {
+      // 1. Atualizar transação
+      const { error: err1 } = await supabase.from("fin_transacoes")
+        .update({ status_aprovacao: status })
+        .eq("id", transacaoId);
+      if (err1) throw err1;
+
+      // 2. Gravar log na tabela de aprovacoes
+      if (user?.id) {
+        await supabase.from("fin_aprovacoes").insert({
+          transacao_id: transacaoId,
+          diretor_id: user.id,
+          status,
+          justificativa
+        });
+      }
+
+      // 3. Avisar o financeiro
+      await supabase.from("notificacoes").insert({
+        modulo_alvo: "financeiro",
+        titulo: `Pagamento ${status.toUpperCase()}`,
+        mensagem: `A diretoria ${status} o pagamento da transação.`,
+        link_url: "/financeiro?tab=contas"
+      });
+
+      return true;
+    },
+    onSuccess: () => {
+      toast.success("Decisão registrada com sucesso!");
+      qc.invalidateQueries({ queryKey: ["diretoria-pagamentos-pendentes"] });
+    },
+    onError: (e: Error) => toast.error(`Erro: ${e.message}`)
+  });
+}

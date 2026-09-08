@@ -98,6 +98,7 @@ export function useCreateMedicao() {
   return useMutation({
     mutationFn: async (payload: {
       item_id: string;
+      item_descricao: string;
       numero_medicao: number;
       data_referencia: string;
       quantidade_executada: number;
@@ -116,6 +117,40 @@ export function useCreateMedicao() {
         .select()
         .single();
       if (error) throw error;
+
+      // Integração com Financeiro: Cria um "Contas a Receber" provisório
+      const vencimento = new Date();
+      vencimento.setDate(vencimento.getDate() + 15); // +15 dias default
+      
+      const transacao = {
+        tipo: 'receber',
+        fornecedor_cliente: 'Cliente da Obra (A Preencher)',
+        descricao: `Faturamento Medição #${payload.numero_medicao} - ${payload.item_descricao} (${payload.quantidade_executada} ud)`,
+        valor: 0.01, // Valor simbólico para o financeiro preencher o real
+        data_vencimento: vencimento.toISOString().split('T')[0],
+        status: 'pendente',
+        obra_id: payload.obraId,
+        status_aprovacao: 'nao_requerida'
+      };
+
+      const { data: finData, error: finErr } = await supabase.from("fin_transacoes").insert(transacao).select().single();
+      
+      if (!finErr && finData) {
+        // Notifica o financeiro
+        await supabase.from("notificacoes").insert({
+          modulo_alvo: 'financeiro',
+          titulo: 'Nova Medição Faturada',
+          mensagem: `A Obra lançou a Medição #${payload.numero_medicao}. Por favor, atualize o valor do Contas a Receber.`,
+          link_url: '/financeiro?tab=contas'
+        });
+        
+        // Coloca log na transação
+        await supabase.from("fin_transacao_logs").insert({
+          transacao_id: finData.id,
+          mensagem: `Transação gerada automaticamente pela aprovação da Medição de Obra.`
+        });
+      }
+
       return data as Medicao;
     },
     onSuccess: (_, vars) => {
