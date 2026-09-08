@@ -134,6 +134,15 @@ export function useEnviarMensagem() {
         autor_id: user.id
       }).select().single();
       if (error) throw error;
+
+      // Disparar notificação para o módulo de destino
+      await supabase.from("notificacoes").insert({
+        modulo_alvo: novo.para_modulo,
+        titulo: `Nova mensagem de ${novo.de_modulo.toUpperCase()}`,
+        mensagem: novo.mensagem,
+        link_url: `/${novo.para_modulo}?tab=mensagens`
+      });
+
       return data;
     },
     onSuccess: () => {
@@ -143,5 +152,86 @@ export function useEnviarMensagem() {
       qc.invalidateQueries({ queryKey: ["diretoria-mensagens"] });
     },
     onError: (e: Error) => toast.error(`Erro: ${e.message}`)
+  });
+}
+
+// ==========================
+// REQUISIÇÕES DE MATERIAL (OBRAS -> COMPRAS)
+// ==========================
+export function useRequisicoes(obraId?: string) {
+  return useQuery({
+    queryKey: ["compras-requisicoes", obraId],
+    queryFn: async () => {
+      let query = supabase
+        .from("compras_requisicoes")
+        .select("*, obra:obras(nome), autor:profiles(nome), itens:compras_requisicoes_itens(*)")
+        .order("created_at", { ascending: false });
+        
+      if (obraId) {
+        query = query.eq("obra_id", obraId);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useAdicionarRequisicao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ obra_id, observacao, itens }: { obra_id: string, observacao?: string, itens: any[] }) => {
+      const { data: user } = await supabase.auth.getUser();
+      
+      // 1. Cria a requisição
+      const { data: req, error: errReq } = await supabase.from("compras_requisicoes").insert({
+        obra_id,
+        observacao,
+        autor_id: user.user?.id
+      }).select().single();
+      if (errReq) throw errReq;
+
+      // 2. Insere os itens
+      const itensToInsert = itens.map(i => ({
+        requisicao_id: req.id,
+        nome_item: i.nome_item,
+        quantidade: i.quantidade,
+        unidade: i.unidade
+      }));
+      
+      const { error: errItens } = await supabase.from("compras_requisicoes_itens").insert(itensToInsert);
+      if (errItens) throw errItens;
+      
+      // Notificar o compras
+      await supabase.from("notificacoes").insert({
+        modulo_alvo: "compras",
+        titulo: "Novo Pedido de Material",
+        mensagem: `A obra solicitou ${itens.length} itens.`,
+        link_url: "/compras?tab=pedidos"
+      });
+
+      return req;
+    },
+    onSuccess: () => {
+      toast.success("Pedido de material enviado ao setor de Compras!");
+      qc.invalidateQueries({ queryKey: ["compras-requisicoes"] });
+    },
+    onError: (e: Error) => toast.error(`Erro ao criar pedido: ${e.message}`)
+  });
+}
+
+export function useAtualizarStatusRequisicao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string, status: string }) => {
+      const { error } = await supabase.from("compras_requisicoes").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Status do pedido atualizado!");
+      qc.invalidateQueries({ queryKey: ["compras-requisicoes"] });
+    },
+    onError: (e: Error) => toast.error(`Erro ao atualizar status: ${e.message}`)
   });
 }

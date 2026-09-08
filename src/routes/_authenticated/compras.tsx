@@ -1,14 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ShoppingCart, LayoutDashboard, PackageOpen, ShieldAlert, FileText, MessageSquare } from "lucide-react";
+import { ShoppingCart, LayoutDashboard, PackageOpen, ShieldAlert, FileText, MessageSquare, ClipboardList } from "lucide-react";
 import { requireModulo } from "@/lib/auth-guards";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { ComprasDashboardTab } from "@/components/compras-dashboard-tab";
 import { ComprasEstoqueTab } from "@/components/compras-estoque-tab";
-
 import { ComprasCertificadosTab } from "@/components/compras-certificados-tab";
 import { ComprasBoletosTab } from "@/components/compras-boletos-tab";
 import { ComprasMensagensTab } from "@/components/compras-mensagens-tab";
+import { ComprasRequisicoesTab } from "@/components/compras-requisicoes-tab";
 
 export const Route = createFileRoute("/_authenticated/compras")({
   head: () => ({ meta: [{ title: "Compras — BRITO ENGENHARIA" }] }),
@@ -28,14 +28,18 @@ function ComprasDashboard() {
       </div>
 
       <Tabs defaultValue="dashboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 max-w-4xl h-auto p-1 bg-muted/50">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6 max-w-5xl h-auto p-1 bg-muted/50">
           <TabsTrigger value="dashboard" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <LayoutDashboard className="w-4 h-4 mr-2" />
             Painel Geral
           </TabsTrigger>
+          <TabsTrigger value="pedidos" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <ClipboardList className="w-4 h-4 mr-2" />
+            Pedidos (Obra)
+          </TabsTrigger>
           <TabsTrigger value="estoque" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <PackageOpen className="w-4 h-4 mr-2" />
-            Estoque / EPIs
+            Estoque
           </TabsTrigger>
           <TabsTrigger value="certificados" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <ShieldAlert className="w-4 h-4 mr-2" />
@@ -43,11 +47,11 @@ function ComprasDashboard() {
           </TabsTrigger>
           <TabsTrigger value="boletos" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <FileText className="w-4 h-4 mr-2" />
-            Boletos & Notas
+            Boletos
           </TabsTrigger>
           <TabsTrigger value="mensagens" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <MessageSquare className="w-4 h-4 mr-2" />
-            Requisições
+            Mensagens
           </TabsTrigger>
         </TabsList>
 
@@ -56,6 +60,10 @@ function ComprasDashboard() {
             <ComprasDashboardTab />
           </TabsContent>
           
+          <TabsContent value="pedidos" className="m-0 focus-visible:outline-none">
+            <ComprasRequisicoesTab />
+          </TabsContent>
+
           <TabsContent value="estoque" className="m-0 focus-visible:outline-none">
             <ComprasEstoqueTab />
           </TabsContent>

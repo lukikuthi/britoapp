@@ -17,10 +17,10 @@ export interface Funcionario {
 export function useFuncionarios() {
   return useQuery({
     queryKey: ["rh-funcionarios"],
-    queryFn: async (): Promise<Funcionario[]> => {
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("rh_funcionarios")
-        .select("*")
+        .select("*, obra:obras(nome)")
         .order("nome");
       if (error) throw error;
       return data;

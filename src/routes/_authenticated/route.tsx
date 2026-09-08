@@ -6,6 +6,7 @@ import { BritoLogo } from "@/components/brito-logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { OfflineIndicator } from "@/components/offline-indicator";
+import { NotificationsPopover } from "@/components/notifications-popover";
 import { History, LayoutDashboard, HardHat, Users as UsersIcon, Menu, X, LogOut, Moon, Sun, Database, StickyNote, Calendar, ShoppingCart, DollarSign, Briefcase } from "lucide-react";
 
 import { requireAuth } from "@/lib/auth-guards";
@@ -274,9 +275,12 @@ function AuthenticatedLayout() {
               <Menu className="size-5" />
             </Button>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setDark((d) => !d)} title="Alternar tema">
-            {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
-          </Button>
+          <div className="flex items-center gap-2">
+            <NotificationsPopover />
+            <Button variant="ghost" size="icon" onClick={() => setDark((d) => !d)} title="Alternar tema">
+              {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
+            </Button>
+          </div>
         </header>
 
         {/* Topbar mobile */}
@@ -285,9 +289,12 @@ function AuthenticatedLayout() {
             <Menu className="size-5" />
           </Button>
           <BritoLogo size="sm" />
-          <Button variant="ghost" size="icon" onClick={() => setDark((d) => !d)} title="Alternar tema">
-            {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
-          </Button>
+          <div className="flex items-center gap-1">
+            <NotificationsPopover />
+            <Button variant="ghost" size="icon" onClick={() => setDark((d) => !d)} title="Alternar tema">
+              {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
+            </Button>
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto">

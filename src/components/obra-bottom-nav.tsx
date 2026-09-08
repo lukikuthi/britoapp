@@ -2,7 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { LayoutGrid, MapPin, Menu, Camera, FileText, Activity, Package, FileCheck, HardHat, BarChart3, Ruler } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type ObraTab = "visao" | "analytics" | "mapa" | "rdo" | "fotografia" | "menu" | "laudos" | "cronograma" | "concretagem" | "fvr" | "rnc" | "bm" | "medicao";
+export type ObraTab = "visao" | "analytics" | "mapa" | "rdo" | "fotografia" | "menu" | "laudos" | "cronograma" | "concretagem" | "fvr" | "rnc" | "bm" | "medicao" | "requisicoes";
 
 interface ObraBottomNavProps {
   obraId: string;
@@ -14,6 +14,7 @@ const tabs: { id: ObraTab; label: string; icon: any; search: { tab: ObraTab } }[
   { id: "rdo", label: "RDO", icon: FileText, search: { tab: "rdo" } },
   { id: "laudos", label: "Laudos", icon: FileCheck, search: { tab: "laudos" } },
   { id: "cronograma", label: "Gantt", icon: LayoutGrid, search: { tab: "cronograma" } },
+  { id: "requisicoes", label: "Material", icon: Package, search: { tab: "requisicoes" } },
   { id: "medicao", label: "Medição", icon: Ruler, search: { tab: "medicao" } },
   { id: "menu", label: "Menu", icon: Menu, search: { tab: "menu" } },
 ];
