@@ -35,8 +35,9 @@ export function NotificationsPopover() {
 
   // Realtime subscription
   useEffect(() => {
+    const channelName = `notificacoes-channel-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const channel = supabase
-      .channel('notificacoes-channel')
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notificacoes' },
