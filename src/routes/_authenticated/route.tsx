@@ -73,7 +73,7 @@ function AuthenticatedLayout() {
     mainNav.push({ to: "/dashboard", label: "Dashboard (Obras)", icon: LayoutDashboard, show: true });
     mainNav.push({ to: "/calendar", label: "Calendário", icon: Calendar, show: true });
     mainNav.push({ to: "/notes", label: "Anotações", icon: StickyNote, show: true });
-    if (isAdmin) mainNav.push({ to: "/obras", label: "Gerenciar obras", icon: HardHat, show: true });
+    if (isAdmin) mainNav.push({ to: "/obras/", label: "Gerenciar obras", icon: HardHat, show: true });
   }
 
   if (userModulos.includes("compras")) {

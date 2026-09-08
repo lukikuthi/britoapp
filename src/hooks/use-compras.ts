@@ -140,7 +140,7 @@ export function useEnviarMensagem() {
         modulo_alvo: novo.para_modulo,
         titulo: `Nova mensagem de ${novo.de_modulo.toUpperCase()}`,
         mensagem: novo.mensagem,
-        link_url: `/${novo.para_modulo}?tab=mensagens`
+        link_url: novo.para_modulo === "obras" ? "/dashboard?tab=mensagens" : `/${novo.para_modulo}?tab=mensagens`
       });
 
       return data;
