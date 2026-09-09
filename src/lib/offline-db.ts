@@ -85,6 +85,20 @@ export async function syncPendingActions(): Promise<boolean> {
 
   for (const item of items) {
     try {
+      // Decode and upload Base64 images if present
+      if (item.operation === "create" && item.payload.storage_path && typeof item.payload.storage_path === 'string' && item.payload.storage_path.startsWith("offline_base64:")) {
+        const parts = item.payload.storage_path.split("::");
+        if (parts.length === 2) {
+          const fileName = parts[0].replace("offline_base64:", "");
+          const base64Data = parts[1];
+          const response = await fetch(base64Data);
+          const blob = await response.blob();
+          
+          await supabase.storage.from("rdo-midias").upload(fileName, blob, { contentType: "image/jpeg" });
+          item.payload.storage_path = fileName; // replace payload with actual path
+        }
+      }
+
       if (item.operation === "create") {
         await supabase.from(item.table).insert(item.payload);
       } else if (item.operation === "update") {

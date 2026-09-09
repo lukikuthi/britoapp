@@ -8,6 +8,7 @@ import { RhFuncionariosTab } from "@/components/rh-funcionarios-tab";
 import { RhExamesTab } from "@/components/rh-exames-tab";
 import { RhFeriasTab } from "@/components/rh-ferias-tab";
 import { RhTerceirosTab } from "@/components/rh-terceiros-tab";
+import { RhFechamentoPontoTab } from "@/components/rh-fechamento-ponto-tab";
 import { ChatSetor } from "@/components/chat-setor";
 
 export const Route = createFileRoute("/_authenticated/rh")({
@@ -28,7 +29,7 @@ function RhDashboard() {
       </div>
 
       <Tabs defaultValue="dashboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 max-w-5xl h-auto p-1 bg-muted/50">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-7 max-w-6xl h-auto p-1 bg-muted/50">
           <TabsTrigger value="dashboard" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <LayoutDashboard className="w-4 h-4 mr-2" />
             Dashboard
@@ -36,6 +37,10 @@ function RhDashboard() {
           <TabsTrigger value="funcionarios" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Users className="w-4 h-4 mr-2" />
             Funcionários
+          </TabsTrigger>
+          <TabsTrigger value="ponto" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <CalendarRange className="w-4 h-4 mr-2" />
+            Ponto
           </TabsTrigger>
           <TabsTrigger value="terceiros" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Building2 className="w-4 h-4 mr-2" />
@@ -58,6 +63,10 @@ function RhDashboard() {
         <div className="mt-6">
           <TabsContent value="dashboard" className="m-0 focus-visible:outline-none">
             <RhDashboardTab />
+          </TabsContent>
+          
+          <TabsContent value="ponto" className="m-0 focus-visible:outline-none">
+            <RhFechamentoPontoTab />
           </TabsContent>
           
           <TabsContent value="funcionarios" className="m-0 focus-visible:outline-none">

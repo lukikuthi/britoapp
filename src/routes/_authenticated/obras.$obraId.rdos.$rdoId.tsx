@@ -3,7 +3,7 @@ import { useRdo, useUpdateRdo, useClonePreviousRdo } from "@/hooks/use-rdo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, FileDown, Loader2, Save } from "lucide-react";
-import { MaoObraSection, EquipamentosSection, AtividadesSection, ComentariosSection, OcorrenciasSection } from "@/components/rdo-sections";
+import { MaoObraSection, EfetivoTerceiroSection, EquipamentosSection, AtividadesSection, ComentariosSection, OcorrenciasSection } from "@/components/rdo-sections";
 import { RdoAssinaturaSection } from "@/components/rdo-assinatura-section";
 import { FvsSection } from "@/components/fvs-section";
 import { generateRdoPdf } from "@/lib/pdf-generator";
@@ -191,6 +191,7 @@ function RdoEditorPage() {
         )}
 
         <MaoObraSection rdoId={rdoId} />
+        <EfetivoTerceiroSection rdoId={rdoId} />
         <EquipamentosSection rdoId={rdoId} />
         <AtividadesSection rdoId={rdoId} />
         <OcorrenciasSection rdoId={rdoId} />

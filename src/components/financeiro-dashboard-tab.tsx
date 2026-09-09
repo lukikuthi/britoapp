@@ -124,6 +124,81 @@ export function FinanceiroDashboardTab() {
           </CardContent>
         </Card>
       </div>
+
+      {/* DRE por Obra */}
+      <Card>
+        <CardHeader>
+          <CardTitle>DRE - Resultado por Obra (Centro de Custo)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-muted text-muted-foreground border-y">
+                <tr>
+                  <th className="p-4 font-medium">Obra (Centro de Custo)</th>
+                  <th className="p-4 font-medium text-right text-emerald-600">Receitas Pagas</th>
+                  <th className="p-4 font-medium text-right text-red-600">Despesas Pagas</th>
+                  <th className="p-4 font-medium text-right">Resultado Líquido</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {(() => {
+                  if (!transacoes) return null;
+                  
+                  // Agrupar por obra
+                  const dreMap = new Map<string, { nome: string, receita: number, despesa: number }>();
+                  
+                  transacoes.filter(t => t.status === 'pago' || t.status === 'recebido').forEach(t => {
+                    const obraId = t.obra_id || 'sem_obra';
+                    const obraNome = t.obra?.nome || 'Despesas Gerais (Matriz)';
+                    
+                    if (!dreMap.has(obraId)) {
+                      dreMap.set(obraId, { nome: obraNome, receita: 0, despesa: 0 });
+                    }
+                    
+                    const dre = dreMap.get(obraId)!;
+                    if (t.tipo === 'receber') dre.receita += Number(t.valor);
+                    if (t.tipo === 'pagar') dre.despesa += Number(t.valor);
+                  });
+                  
+                  const rows = Array.from(dreMap.values());
+                  
+                  if (rows.length === 0) {
+                    return <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">Nenhuma transação baixada para compor o DRE.</td></tr>;
+                  }
+
+                  let totRec = 0;
+                  let totDesp = 0;
+                  
+                  return (
+                    <>
+                      {rows.map((r, i) => {
+                        totRec += r.receita;
+                        totDesp += r.despesa;
+                        const liq = r.receita - r.despesa;
+                        return (
+                          <tr key={i} className="hover:bg-muted/50 transition-colors">
+                            <td className="p-4 font-medium">{r.nome}</td>
+                            <td className="p-4 text-right text-emerald-600">{formatCurrency(r.receita)}</td>
+                            <td className="p-4 text-right text-red-600">{formatCurrency(r.despesa)}</td>
+                            <td className={`p-4 text-right font-bold ${liq >= 0 ? 'text-blue-600' : 'text-red-600'}`}>{formatCurrency(liq)}</td>
+                          </tr>
+                        );
+                      })}
+                      <tr className="bg-muted/30 font-bold border-t-2">
+                        <td className="p-4">TOTAL GERAL</td>
+                        <td className="p-4 text-right text-emerald-600">{formatCurrency(totRec)}</td>
+                        <td className="p-4 text-right text-red-600">{formatCurrency(totDesp)}</td>
+                        <td className={`p-4 text-right ${totRec - totDesp >= 0 ? 'text-blue-600' : 'text-red-600'}`}>{formatCurrency(totRec - totDesp)}</td>
+                      </tr>
+                    </>
+                  );
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

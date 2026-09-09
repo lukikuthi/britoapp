@@ -137,6 +137,64 @@ export function RdoSection({ rdoId, tableName, title, FormComponent, renderRow, 
 // Form components
 // ==========================================
 
+import { useTerceiros } from "@/hooks/use-rh";
+
+export function EfetivoTerceiroSection({ rdoId }: { rdoId: string }) {
+  const { data: terceiros } = useTerceiros();
+  return (
+    <RdoSection
+      rdoId={rdoId}
+      tableName="rdo_efetivo_terceiro"
+      title="Efetivo Terceirizado (Empreiteiras)"
+      columns={["Empreiteira", "Especialidade/Atividade", "Qtd", "Status"]}
+      FormComponent={({ onSave, onCancel, initialData }) => {
+        const [data, setData] = useState(initialData || { empreiteira_id: "", especialidade_atividade: "", quantidade_profissionais: 1 });
+        return (
+          <div className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+              <Select value={data.empreiteira_id} onValueChange={v => setData({...data, empreiteira_id: v})}>
+                <SelectTrigger><SelectValue placeholder="Selecione a Empreiteira" /></SelectTrigger>
+                <SelectContent>
+                  {terceiros?.map((t: any) => (
+                    <SelectItem key={t.id} value={t.id}>{t.razao_social}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Input className="lg:col-span-2" placeholder="Atividade realizada" value={data.especialidade_atividade} onChange={e => setData({...data, especialidade_atividade: e.target.value})} />
+              <Input type="number" min={1} placeholder="Qtd Profissionais" value={data.quantidade_profissionais} onChange={e => setData({...data, quantidade_profissionais: parseInt(e.target.value) || 1})} />
+
+              <div className="flex gap-1 justify-end lg:col-span-4">
+                <Button size="icon" onClick={() => onSave(data)}><Check className="size-4" /></Button>
+                <Button size="icon" variant="ghost" onClick={onCancel}><X className="size-4" /></Button>
+              </div>
+            </div>
+          </div>
+        );
+      }}
+      renderRow={(item, onEdit, onDelete) => {
+        const empresa = terceiros?.find((t: any) => t.id === item.empreiteira_id);
+        return (
+          <>
+            <td className="px-4 py-2 font-medium">{empresa?.razao_social || 'Desconhecida'}</td>
+            <td className="px-4 py-2 text-muted-foreground">{item.especialidade_atividade}</td>
+            <td className="px-4 py-2 font-bold">{item.quantidade_profissionais}</td>
+            <td className="px-4 py-2">
+              <Badge variant="outline" className="bg-emerald-50 text-emerald-600">Presente</Badge>
+            </td>
+            <td className="px-4 py-2 text-right">
+              <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={onEdit}><Edit2 className="size-3.5" /></Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={onDelete}><Trash2 className="size-3.5" /></Button>
+              </div>
+            </td>
+          </>
+        );
+      }}
+    />
+  );
+}
+
 export function MaoObraSection({ rdoId }: { rdoId: string }) {
   return (
     <RdoSection

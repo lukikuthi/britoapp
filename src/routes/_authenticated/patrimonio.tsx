@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { requireModuleAccess } from "@/lib/auth-guards";
 import { PatrimonioInventarioTab } from "@/components/patrimonio-inventario-tab";
 import { PatrimonioMovimentacaoTab } from "@/components/patrimonio-movimentacao-tab";
+import { PatrimonioManutencaoTab } from "@/components/patrimonio-manutencao-tab";
 
 export const Route = createFileRoute("/_authenticated/patrimonio")({
   beforeLoad: ({ context }) => requireModuleAccess(context, "suprimentos"),
@@ -48,11 +49,7 @@ function PatrimonioPage() {
         </TabsContent>
         
         <TabsContent value="manutencao" className="m-0 focus-visible:outline-none">
-          <div className="bg-card border rounded-lg p-8 text-center text-muted-foreground">
-            <ShieldAlert className="size-12 mx-auto mb-4 opacity-20" />
-            <h3 className="text-lg font-semibold mb-2">Módulo de Manutenção</h3>
-            <p>Controle de oficinas, custos de conserto e vida útil em breve.</p>
-          </div>
+          <PatrimonioManutencaoTab />
         </TabsContent>
       </Tabs>
     </div>

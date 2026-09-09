@@ -98,3 +98,74 @@ export function useRegistrarDevolucao() {
     onError: (e: Error) => toast.error(`Erro: ${e.message}`)
   });
 }
+
+// ==========================
+// MANUTENÇÕES (Oficina)
+// ==========================
+export function useManutencoes() {
+  return useQuery({
+    queryKey: ["patrimonio-manutencoes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("patrimonio_manutencoes")
+        .select("*, equipamento:cad_equipamentos(nome, codigo_patrimonio, status)")
+        .order("data_ida", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useEnviarOficina() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ equipamento_id, motivo }: { equipamento_id: string, motivo: string }) => {
+      // 1. Cria a manutenção
+      const { error: manError } = await supabase.from("patrimonio_manutencoes").insert({
+        equipamento_id,
+        motivo,
+        status: 'na_oficina'
+      });
+      if (manError) throw manError;
+
+      // 2. Muda status da máquina
+      const { error: eqError } = await supabase.from("cad_equipamentos").update({
+        status: 'manutencao'
+      }).eq("id", equipamento_id);
+      if (eqError) throw eqError;
+    },
+    onSuccess: () => {
+      toast.success("Equipamento enviado para a oficina!");
+      qc.invalidateQueries({ queryKey: ["patrimonio-manutencoes"] });
+      qc.invalidateQueries({ queryKey: ["patrimonio-equipamentos"] });
+    },
+    onError: (e: Error) => toast.error(`Erro: ${e.message}`)
+  });
+}
+
+export function useRetornarOficina() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, equipamento_id, custo_reparo, statusFinal }: { id: string, equipamento_id: string, custo_reparo: number, statusFinal: 'consertado' | 'sucata' }) => {
+      // 1. Atualiza a manutenção
+      const { error: manError } = await supabase.from("patrimonio_manutencoes").update({
+        custo_reparo,
+        status: statusFinal,
+        data_retorno: new Date().toISOString()
+      }).eq("id", id);
+      if (manError) throw manError;
+
+      // 2. Muda status da máquina
+      const { error: eqError } = await supabase.from("cad_equipamentos").update({
+        status: statusFinal === 'consertado' ? 'disponivel' : 'quebrado'
+      }).eq("id", equipamento_id);
+      if (eqError) throw eqError;
+    },
+    onSuccess: () => {
+      toast.success("Retorno registrado com sucesso!");
+      qc.invalidateQueries({ queryKey: ["patrimonio-manutencoes"] });
+      qc.invalidateQueries({ queryKey: ["patrimonio-equipamentos"] });
+    },
+    onError: (e: Error) => toast.error(`Erro: ${e.message}`)
+  });
+}

@@ -208,9 +208,61 @@ export function useAdicionarTerceiro() {
       return data;
     },
     onSuccess: () => {
-      toast.success("Empreiteira cadastrada!");
+      toast.success("Empresa terceirizada cadastrada!");
       qc.invalidateQueries({ queryKey: ["rh-terceiros"] });
     },
     onError: (e: Error) => toast.error(`Erro: ${e.message}`)
+  });
+}
+
+// ==========================
+// PONTO (Fechamento RH)
+// ==========================
+export function useFechamentoPonto(mes_ano: string) {
+  // mes_ano: "YYYY-MM"
+  return useQuery({
+    queryKey: ["rh-fechamento-ponto", mes_ano],
+    queryFn: async () => {
+      if (!mes_ano) return [];
+      
+      const { data, error } = await supabase
+        .from("rh_ponto_diario")
+        .select("*, funcionario:rh_funcionarios(nome, cargo, salario)")
+        .gte("data_ponto", `${mes_ano}-01`)
+        .lte("data_ponto", `${mes_ano}-31`); // funciona pro DB
+
+      if (error) throw error;
+      
+      // Agrupar por funcionário
+      const resumoMap = new Map<string, any>();
+      
+      for (const reg of (data || [])) {
+        if (!reg.funcionario) continue;
+        
+        const fId = reg.funcionario_id;
+        if (!resumoMap.has(fId)) {
+          resumoMap.set(fId, {
+            id: fId,
+            nome: reg.funcionario.nome,
+            cargo: reg.funcionario.cargo,
+            salario: reg.funcionario.salario || 0,
+            dias_presente: 0,
+            faltas: 0,
+            atrasos: 0,
+            horas_extras: 0
+          });
+        }
+        
+        const fData = resumoMap.get(fId);
+        if (reg.presenca === 'presente') fData.dias_presente++;
+        else if (reg.presenca === 'falta_injustificada') fData.faltas++;
+        else if (reg.presenca === 'atraso') fData.atrasos++;
+        
+        fData.horas_extras += Number(reg.horas_extras || 0);
+      }
+      
+      return Array.from(resumoMap.values());
+    },
+    enabled: !!mes_ano
   });
 }

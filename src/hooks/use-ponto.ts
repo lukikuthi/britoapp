@@ -7,14 +7,49 @@ export function useFuncionariosAlocados(obraId: string) {
   return useQuery({
     queryKey: ["funcionarios-alocados", obraId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // 1. Busca os funcionários da obra
+      const { data: funcs, error } = await supabase
         .from("rh_funcionarios")
         .select("id, nome, cargo, status")
         .eq("obra_id", obraId)
         .eq("status", "ativo")
         .order("nome");
       if (error) throw error;
-      return data || [];
+      if (!funcs || funcs.length === 0) return [];
+
+      const funcIds = funcs.map((f: any) => f.id);
+
+      // 2. Busca os ASOs (exames ocupacionais)
+      const { data: exames } = await supabase
+        .from("rh_exames")
+        .select("funcionario_id, data_vencimento, status")
+        .in("funcionario_id", funcIds)
+        .in("status", ["valido", "vencido"]);
+
+      // Cria um mapa do ASO mais recente para cada func
+      const asoMap = new Map<string, any>();
+      if (exames) {
+        for (const ex of exames) {
+          const atual = asoMap.get(ex.funcionario_id);
+          // Substitui se não houver ou se a data de vencimento for mais recente
+          if (!atual || new Date(ex.data_vencimento) > new Date(atual.data_vencimento)) {
+            asoMap.set(ex.funcionario_id, ex);
+          }
+        }
+      }
+
+      const hoje = new Date().toISOString().split('T')[0];
+
+      // Mapeia adicionando a flag de ASO válido
+      return funcs.map((f: any) => {
+        const aso = asoMap.get(f.id);
+        const asoValido = aso && aso.data_vencimento >= hoje && aso.status !== 'vencido';
+        return {
+          ...f,
+          asoValido: !!asoValido,
+          asoVencimento: aso?.data_vencimento || null
+        };
+      });
     },
     enabled: !!obraId,
   });

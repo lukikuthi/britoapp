@@ -111,7 +111,7 @@ export function PatrimonioInventarioTab() {
                     <th className="p-4 font-medium">Equipamento</th>
                     <th className="p-4 font-medium">Tipo</th>
                     <th className="p-4 font-medium">Status Atual</th>
-                    <th className="p-4 font-medium text-right">Valor</th>
+                    <th className="p-4 font-medium text-right">Valor Atual (Depreciado)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -129,7 +129,27 @@ export function PatrimonioInventarioTab() {
                           {eq.status.replace('_', ' ').toUpperCase()}
                         </Badge>
                       </td>
-                      <td className="p-4 text-right">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(eq.valor_aquisicao || 0)}</td>
+                      <td className="p-4 text-right">
+                        <div className="flex flex-col items-end">
+                          <span className="text-muted-foreground line-through text-xs">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(eq.valor_aquisicao || 0)}
+                          </span>
+                          <span className="font-medium text-foreground">
+                            {(() => {
+                              if (!eq.data_aquisicao || !eq.vida_util_meses) return "-";
+                              
+                              const mesesPassados = (new Date().getTime() - new Date(eq.data_aquisicao).getTime()) / (1000 * 60 * 60 * 24 * 30);
+                              
+                              if (mesesPassados >= eq.vida_util_meses) return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(0);
+                              
+                              const depreciacaoPorMes = eq.valor_aquisicao / eq.vida_util_meses;
+                              const valorAtual = Math.max(0, eq.valor_aquisicao - (depreciacaoPorMes * mesesPassados));
+                              
+                              return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorAtual);
+                            })()}
+                          </span>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

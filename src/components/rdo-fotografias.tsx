@@ -50,6 +50,26 @@ export function RdoFotografiasSection({ rdoId, obraId }: RdoFotografiasProps) {
       const compressed = await imageCompression(file, { maxSizeMB: 1, maxWidthOrHeight: 1600 });
       
       const fileName = `${obraId}/${rdoId}/${crypto.randomUUID()}.jpg`;
+
+      // Check Offline
+      if (!navigator.onLine) {
+        toast.info("Modo offline: Salvando foto localmente...");
+        const reader = new FileReader();
+        reader.readAsDataURL(compressed);
+        reader.onloadend = async () => {
+          const base64data = reader.result;
+          await addMut.mutateAsync({
+            table: "rdo_midias",
+            rdoId,
+            payload: { storage_path: `offline_base64:${fileName}::${base64data}`, tipo: "imagem" }
+          });
+          toast.success("Foto salva offline! Sincronização ocorrerá quando houver internet.");
+          setUploading(false);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        };
+        return;
+      }
+      
       toast.info("Fazendo upload...");
       const { error: uploadError } = await supabase.storage
         .from("rdo-midias")
@@ -66,8 +86,10 @@ export function RdoFotografiasSection({ rdoId, obraId }: RdoFotografiasProps) {
     } catch (err: any) {
       toast.error("Erro no upload: " + err.message);
     } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (navigator.onLine) {
+        setUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
     }
   };
 

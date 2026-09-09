@@ -221,6 +221,51 @@ export function useAdicionarRequisicao() {
   });
 }
 
+export function useUpdateRequisicaoStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase.from("compras_requisicoes").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["compras-requisicoes"] });
+    },
+  });
+}
+
+export function useReceberRequisicao() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ requisicaoId, items }: { requisicaoId: string, items: any[] }) => {
+      // 1. Atualiza o status_recebimento da requisicao para 'recebido'
+      const { error: reqErr } = await supabase.from("compras_requisicoes").update({
+        status_recebimento: 'recebido',
+        status: 'entregue',
+        data_recebimento: new Date().toISOString()
+      }).eq("id", requisicaoId);
+      
+      if (reqErr) throw reqErr;
+
+      // 2. Para cada item recebido, incrementa o quantidade_atual em compras_itens
+      for (const item of items) {
+        // Obter o item atual
+        const { data: catItem } = await supabase.from("compras_itens").select("quantidade_atual").eq("id", item.item_id).single();
+        if (catItem) {
+          await supabase.from("compras_itens").update({
+            quantidade_atual: Number(catItem.quantidade_atual || 0) + Number(item.quantidade)
+          }).eq("id", item.item_id);
+        }
+      }
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["compras-requisicoes"] });
+      queryClient.invalidateQueries({ queryKey: ["compras-itens"] });
+    },
+  });
+}
+
 export function useAtualizarStatusRequisicao() {
   const qc = useQueryClient();
   return useMutation({
@@ -281,9 +326,27 @@ export function useAprovarCotacao() {
       await supabase.from("compras_cotacoes").update({ vencedora: true }).eq("id", cotacao_id);
       // 3. Muda a requisição para aprovada
       await supabase.from("compras_requisicoes").update({ status: 'aprovado' }).eq("id", requisicao_id);
+      
+      // 4. Busca os dados da cotação e requisição para gerar o contas a pagar
+      const { data: cotacao } = await supabase.from("compras_cotacoes").select("*").eq("id", cotacao_id).single();
+      const { data: req } = await supabase.from("compras_requisicoes").select("obra_id").eq("id", requisicao_id).single();
+      
+      if (cotacao && req) {
+        // Insere a conta a pagar no financeiro
+        await supabase.from("fin_transacoes").insert({
+          obra_id: req.obra_id,
+          tipo: 'despesa',
+          categoria: 'Materiais',
+          descricao: `Compra Ref: Pedido #${requisicao_id.split('-')[0].toUpperCase()} - ${cotacao.fornecedor}`,
+          valor: cotacao.valor_total,
+          fornecedor: cotacao.fornecedor,
+          status: 'pendente', // Aguardando diretoria/financeiro
+          data_vencimento: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // +15 dias placeholder
+        });
+      }
     },
     onSuccess: (_, vars) => {
-      toast.success("Cotação aprovada e pedido liberado!");
+      toast.success("Cotação aprovada e Conta a Pagar gerada no Financeiro!");
       qc.invalidateQueries({ queryKey: ["compras-cotacoes", vars.requisicao_id] });
       qc.invalidateQueries({ queryKey: ["compras-requisicoes"] });
     },

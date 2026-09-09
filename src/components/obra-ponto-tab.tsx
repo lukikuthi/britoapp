@@ -119,14 +119,20 @@ export function ObraPontoTab({ obraId }: { obraId: string }) {
                   if (!reg) return null;
                   
                   const statusOpt = STATUS_PRESENCA.find(s => s.value === reg.presenca);
+                  const blocked = f.asoValido === false;
 
                   return (
-                    <tr key={f.id} className="hover:bg-muted/50 transition-colors">
-                      <td className="p-4 font-medium">{f.nome}</td>
+                    <tr key={f.id} className={`transition-colors ${blocked ? 'bg-red-50/50' : 'hover:bg-muted/50'}`}>
+                      <td className="p-4">
+                        <div className="font-medium flex items-center gap-2">
+                          {f.nome}
+                          {blocked && <Badge variant="destructive" className="text-[10px]">ASO Vencido</Badge>}
+                        </div>
+                      </td>
                       <td className="p-4 text-muted-foreground">{f.cargo}</td>
                       <td className="p-4">
-                        <Select value={reg.presenca} onValueChange={(v) => handleChange(f.id, 'presenca', v)}>
-                          <SelectTrigger className={`h-8 text-xs font-semibold ${statusOpt?.color}`}>
+                        <Select disabled={blocked} value={blocked ? 'afastado' : reg.presenca} onValueChange={(v) => handleChange(f.id, 'presenca', v)}>
+                          <SelectTrigger className={`h-8 text-xs font-semibold ${blocked ? 'bg-red-100 text-red-800' : statusOpt?.color}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -143,7 +149,8 @@ export function ObraPontoTab({ obraId }: { obraId: string }) {
                           min="0" 
                           max="24"
                           className="h-8 text-xs" 
-                          value={reg.horas_extras || ""} 
+                          disabled={blocked}
+                          value={blocked ? "" : (reg.horas_extras || "")} 
                           onChange={(e) => handleChange(f.id, 'horas_extras', parseFloat(e.target.value))}
                           placeholder="Ex: 1.5"
                         />
@@ -152,7 +159,8 @@ export function ObraPontoTab({ obraId }: { obraId: string }) {
                         <Input 
                           type="text" 
                           className="h-8 text-xs" 
-                          value={reg.observacao} 
+                          disabled={blocked}
+                          value={blocked ? "Bloqueado pelo SESMT (ASO Vencido)" : reg.observacao} 
                           onChange={(e) => handleChange(f.id, 'observacao', e.target.value)}
                           placeholder="Motivo da falta, atraso, etc."
                         />
