@@ -36,6 +36,7 @@ import { ObraMedicaoTab } from "@/components/obra-medicao-tab";
 import { ObraRequisicoesTab } from "@/components/obra-requisicoes-tab";
 import { ObraPontoTab } from "@/components/obra-ponto-tab";
 import { ObraRecebimentoTab } from "@/components/obra-recebimento-tab";
+import { ObraFaturamentoTab } from "@/components/obra-faturamento-tab";
 import { useTutorial } from "@/hooks/use-tutorial";
 import { useVisaoGeral } from "@/hooks/use-5-passos";
 import { generateApontamentosPdf } from "@/lib/pdf-apontamentos";
@@ -349,6 +350,10 @@ function ObraDetailMain({ obraId }: { obraId: string }) {
 
         {tab === "apontamento" && (
           <ObraPontoTab obraId={obraId} />
+        )}
+
+        {tab === "faturamento" && (
+          <ObraFaturamentoTab obraId={obraId} />
         )}
 
         {tab === "menu" && (

@@ -44,7 +44,7 @@ export function useTransacoes(tipo?: 'pagar' | 'receber') {
     queryFn: async () => {
       let query = supabase
         .from("fin_transacoes")
-        .select("*, obra:obras(nome), conta:fin_contas_bancarias(nome_banco), categoria:fin_categorias(nome, cor)")
+        .select("*, obra:obras(nome), conta:fin_contas_bancarias(nome_banco), categoria:fin_categorias(nome, cor), rateios:fin_transacoes_rateio(*, obra:obras(nome))")
         .order("data_vencimento", { ascending: true });
       
       if (tipo) {
@@ -69,8 +69,24 @@ export function useAdicionarTransacao() {
         novo.status_aprovacao = 'nao_requerida';
       }
       
+      // Separa rateios se existirem
+      const rateios = novo.rateios;
+      delete novo.rateios;
+
       const { data, error } = await supabase.from("fin_transacoes").insert(novo).select().single();
       if (error) throw error;
+      
+      // Insere os rateios se houver
+      if (rateios && rateios.length > 0) {
+        const insertRateios = rateios.map((r: any) => ({
+          transacao_id: data.id,
+          obra_id: r.obra_id,
+          valor_rateado: r.valor_rateado,
+          percentual: r.percentual
+        }));
+        const { error: ratErr } = await supabase.from("fin_transacoes_rateio").insert(insertRateios);
+        if (ratErr) throw ratErr;
+      }
       
       // Se precisar de aprovação, avisa a diretoria
       if (novo.status_aprovacao === 'pendente') {
@@ -170,5 +186,64 @@ export function useAdicionarLogTransacao() {
       qc.invalidateQueries({ queryKey: ["fin-transacao-logs", variables.transacao_id] });
     },
     onError: (e: Error) => toast.error(`Erro ao adicionar anotação: ${e.message}`)
+  });
+}
+
+// ==========================
+// FATURAMENTO E MEDIÇÃO (V6)
+// ==========================
+export function useFaturamentosObra(obraId: string) {
+  return useQuery({
+    queryKey: ["fin-faturamento", obraId],
+    queryFn: async () => {
+      if (!obraId) return { clientes: [], terceiros: [] };
+
+      const { data: clientes, error: errC } = await supabase
+        .from("obras_medicoes_clientes")
+        .select("*, transacao:fin_transacoes(status)")
+        .eq("obra_id", obraId)
+        .order("created_at", { ascending: false });
+      if (errC) throw errC;
+
+      const { data: terceiros, error: errT } = await supabase
+        .from("obras_medicoes_terceiros")
+        .select("*, empreiteira:cad_terceiros(razao_social), transacao:fin_transacoes(status)")
+        .eq("obra_id", obraId)
+        .order("created_at", { ascending: false });
+      if (errT) throw errT;
+
+      return { clientes, terceiros };
+    },
+    enabled: !!obraId
+  });
+}
+
+export function useCriarMedicaoCliente() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (novo: { obra_id: string, periodo: string, valor: number, descricao: string }) => {
+      const { data, error } = await supabase.from("obras_medicoes_clientes").insert(novo).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Medição de Cliente registrada! Aguardando Faturamento pelo financeiro.");
+      qc.invalidateQueries({ queryKey: ["fin-faturamento"] });
+    }
+  });
+}
+
+export function useCriarMedicaoTerceiro() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (novo: { obra_id: string, empreiteira_id: string, periodo: string, valor: number, descricao: string }) => {
+      const { data, error } = await supabase.from("obras_medicoes_terceiros").insert(novo).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Medição de Terceiro registrada! Aguardando Processamento de pagamento.");
+      qc.invalidateQueries({ queryKey: ["fin-faturamento"] });
+    }
   });
 }

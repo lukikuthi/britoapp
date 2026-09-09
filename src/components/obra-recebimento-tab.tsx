@@ -106,6 +106,111 @@ export function ObraRecebimentoTab({ obraId }: { obraId: string }) {
           </div>
         </CardContent>
       </Card>
+
+      {/* NOVO: Retirada de Estoque */}
+      <Card className="border-amber-200 bg-amber-50/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-amber-700">
+            <PackageOpen className="size-5" />
+            Retirada de Material (Consumo)
+          </CardTitle>
+          <CardDescription>
+            Registre a saída de materiais do almoxarifado para uso na obra. Isso deduzirá o saldo do estoque central.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RetiradaEstoqueForm obraId={obraId} />
+        </CardContent>
+      </Card>
     </div>
+  );
+}
+
+// Subcomponente para o formulário de retirada
+import { useEstoque } from "@/hooks/use-compras";
+import { useConsumirEstoque } from "@/hooks/use-compras";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+function RetiradaEstoqueForm({ obraId }: { obraId: string }) {
+  const { data: estoque, isLoading } = useEstoque();
+  const consumirMut = useConsumirEstoque();
+  const [itemId, setItemId] = useState("");
+  const [qtd, setQtd] = useState("");
+  const [obs, setObs] = useState("");
+
+  // Filtra o estoque para mostrar apenas itens que têm saldo > 0
+  const itensDisponiveis = estoque?.filter(i => (i.quantidade_atual || 0) > 0) || [];
+  const itemSelecionado = itensDisponiveis.find(i => i.id === itemId);
+
+  const handleRetirar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!itemId || !qtd) return;
+    
+    try {
+      await consumirMut.mutateAsync({
+        item_id: itemId,
+        obra_id: obraId,
+        quantidade: Number(qtd),
+        observacao: obs
+      });
+      setItemId("");
+      setQtd("");
+      setObs("");
+    } catch (err) {}
+  };
+
+  if (isLoading) return <div className="animate-pulse h-12 bg-muted rounded-md" />;
+
+  return (
+    <form onSubmit={handleRetirar} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Material</Label>
+          <Select value={itemId} onValueChange={setItemId} required>
+            <SelectTrigger className="bg-background">
+              <SelectValue placeholder="Selecione o material" />
+            </SelectTrigger>
+            <SelectContent>
+              {itensDisponiveis.map(item => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.nome} (Saldo: {item.quantidade_atual})
+                </SelectItem>
+              ))}
+              {itensDisponiveis.length === 0 && (
+                <SelectItem value="none" disabled>Nenhum material com saldo no almoxarifado</SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Quantidade a Retirar</Label>
+          <Input 
+            type="number" 
+            min="1" 
+            max={itemSelecionado?.quantidade_atual || 1} 
+            required 
+            value={qtd} 
+            onChange={e => setQtd(e.target.value)} 
+            placeholder="Ex: 5"
+            className="bg-background"
+          />
+        </div>
+        <div className="space-y-2 md:col-span-2">
+          <Label>Observação / Destino (Opcional)</Label>
+          <Input 
+            value={obs} 
+            onChange={e => setObs(e.target.value)} 
+            placeholder="Ex: Usado na concretagem do pilar P12"
+            className="bg-background"
+          />
+        </div>
+      </div>
+      <Button type="submit" disabled={consumirMut.isPending || !itemId} className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white">
+        {consumirMut.isPending ? <Loader2 className="size-4 animate-spin mr-2" /> : <PackageOpen className="size-4 mr-2" />}
+        Confirmar Retirada
+      </Button>
+    </form>
   );
 }

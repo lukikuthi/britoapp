@@ -124,20 +124,25 @@ export function FinanceiroContasTab() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Centro de Custo</Label>
-                  <Select value={form.obra_id} onValueChange={(v) => setForm({...form, obra_id: v})}>
-                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="matriz">Despesa Geral / Matriz</SelectItem>
-                      {obras?.map(o => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
                   <Label>Vencimento</Label>
                   <Input type="date" required value={form.data_vencimento} onChange={e => setForm({...form, data_vencimento: e.target.value})} />
                 </div>
               </div>
+
+              <div className="space-y-2 border p-4 rounded-md bg-muted/20">
+                <Label className="text-base">Rateio (Centro de Custo)</Label>
+                <Select value={form.obra_id} onValueChange={(v) => setForm({...form, obra_id: v})}>
+                  <SelectTrigger><SelectValue placeholder="Centro de custo (100%)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="matriz">Matriz / Geral (100%)</SelectItem>
+                    {obras?.map(o => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-2">
+                  *Para realizar o rateio (ex: 50% Obra A / 50% Obra B), acesse a despesa criada e adicione as obras no botão "Editar Rateio" (Em breve). Por enquanto, as notas serão lançadas integralmente na obra selecionada.
+                </p>
+              </div>
+
               <Button type="submit" className="w-full" disabled={addTransacao.isPending}>
                 {addTransacao.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} Salvar Lançamento
               </Button>

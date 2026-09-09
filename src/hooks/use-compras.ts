@@ -266,6 +266,46 @@ export function useReceberRequisicao() {
   });
 }
 
+export function useConsumirEstoque() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async ({ item_id, obra_id, quantidade, observacao }: { item_id: string, obra_id: string, quantidade: number, observacao?: string }) => {
+      // 1. Obtém o saldo atual
+      const { data: item } = await supabase.from("compras_itens").select("quantidade_atual").eq("id", item_id).single();
+      if (!item) throw new Error("Item não encontrado.");
+      
+      const qtdAtual = Number(item.quantidade_atual || 0);
+      if (qtdAtual < quantidade) throw new Error("Estoque insuficiente para esta retirada.");
+
+      // 2. Registra a movimentação
+      const { error: movErr } = await supabase.from("compras_movimentacoes").insert({
+        item_id,
+        obra_id,
+        quantidade,
+        tipo: 'saida',
+        registrado_por: user?.id,
+        observacao
+      });
+      if (movErr) throw movErr;
+
+      // 3. Subtrai o saldo
+      const { error: updErr } = await supabase.from("compras_itens").update({
+        quantidade_atual: qtdAtual - quantidade
+      }).eq("id", item_id);
+      
+      if (updErr) throw updErr;
+      return true;
+    },
+    onSuccess: () => {
+      toast.success("Retirada registrada com sucesso!");
+      qc.invalidateQueries({ queryKey: ["compras-itens"] });
+      qc.invalidateQueries({ queryKey: ["compras-movimentacoes"] });
+    },
+    onError: (e: Error) => toast.error(`Erro na retirada: ${e.message}`)
+  });
+}
+
 export function useAtualizarStatusRequisicao() {
   const qc = useQueryClient();
   return useMutation({

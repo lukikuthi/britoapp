@@ -1,8 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
-import { LayoutGrid, MapPin, Menu, Camera, FileText, Activity, Package, FileCheck, HardHat, BarChart3, Ruler } from "lucide-react";
+import { LayoutGrid, MapPin, Menu, Camera, FileText, Activity, Package, FileCheck, HardHat, BarChart3, Ruler, Truck, Receipt } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type ObraTab = "visao" | "analytics" | "mapa" | "rdo" | "fotografia" | "menu" | "laudos" | "cronograma" | "concretagem" | "fvr" | "rnc" | "bm" | "medicao" | "requisicoes" | "recebimento" | "apontamento";
+export type ObraTab = "visao" | "analytics" | "mapa" | "rdo" | "fotografia" | "menu" | "laudos" | "cronograma" | "concretagem" | "fvr" | "rnc" | "bm" | "medicao" | "faturamento" | "requisicoes" | "recebimento" | "apontamento";
   
   interface ObraBottomNavProps {
     obraId: string;
@@ -16,8 +16,9 @@ export type ObraTab = "visao" | "analytics" | "mapa" | "rdo" | "fotografia" | "m
     { id: "laudos", label: "Laudos", icon: FileCheck, search: { tab: "laudos" } },
     { id: "cronograma", label: "Gantt", icon: LayoutGrid, search: { tab: "cronograma" } },
     { id: "requisicoes", label: "Material", icon: Package, search: { tab: "requisicoes" } },
-    { id: "recebimento", label: "Almoxarifado", icon: Package, search: { tab: "recebimento" } },
+    { id: "recebimento", label: "Almoxarifado", icon: Truck, search: { tab: "recebimento" } },
     { id: "medicao", label: "Medição", icon: Ruler, search: { tab: "medicao" } },
+    { id: "faturamento", label: "Faturam.", icon: Receipt, search: { tab: "faturamento" } },
     { id: "menu", label: "Menu", icon: Menu, search: { tab: "menu" } },
   ];
 
