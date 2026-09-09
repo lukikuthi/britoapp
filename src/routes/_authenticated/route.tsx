@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { NotificationsPopover } from "@/components/notifications-popover";
-import { History, LayoutDashboard, HardHat, Users as UsersIcon, Menu, X, LogOut, Moon, Sun, Database, StickyNote, Calendar, ShoppingCart, DollarSign, Briefcase } from "lucide-react";
+import { History, LayoutDashboard, HardHat, Users as UsersIcon, Menu, X, LogOut, Moon, Sun, Database, StickyNote, Calendar, ShoppingCart, DollarSign, Briefcase, Wrench } from "lucide-react";
 
 import { requireAuth } from "@/lib/auth-guards";
 
@@ -76,8 +76,9 @@ function AuthenticatedLayout() {
     if (isAdmin) mainNav.push({ to: "/obras/", label: "Gerenciar obras", icon: HardHat, show: true });
   }
 
-  if (userModulos.includes("compras")) {
+  if (userModulos.includes("compras") || userModulos.includes("suprimentos")) {
     mainNav.push({ to: "/compras", label: "Compras e Suprimentos", icon: ShoppingCart, show: true });
+    mainNav.push({ to: "/patrimonio", label: "Patrimônio e Frotas", icon: Wrench, show: true });
   }
 
   if (userModulos.includes("financeiro")) {

@@ -181,3 +181,36 @@ export function useAgendarFerias() {
     onError: (e: Error) => toast.error(`Erro: ${e.message}`)
   });
 }
+
+// ==========================
+// EMPREITEIROS / TERCEIRIZADOS (V4)
+// ==========================
+export function useTerceiros() {
+  return useQuery({
+    queryKey: ["rh-terceiros"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cad_terceiros")
+        .select("*")
+        .order("razao_social", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useAdicionarTerceiro() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (novo: any) => {
+      const { data, error } = await supabase.from("cad_terceiros").insert(novo).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Empreiteira cadastrada!");
+      qc.invalidateQueries({ queryKey: ["rh-terceiros"] });
+    },
+    onError: (e: Error) => toast.error(`Erro: ${e.message}`)
+  });
+}

@@ -235,3 +235,58 @@ export function useAtualizarStatusRequisicao() {
     onError: (e: Error) => toast.error(`Erro ao atualizar status: ${e.message}`)
   });
 }
+
+// ==========================
+// COTAÇÕES (COMPRAS)
+// ==========================
+export function useCotacoes(requisicao_id: string) {
+  return useQuery({
+    queryKey: ["compras-cotacoes", requisicao_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("compras_cotacoes")
+        .select("*")
+        .eq("requisicao_id", requisicao_id)
+        .order("valor_total", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!requisicao_id
+  });
+}
+
+export function useAdicionarCotacao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (novo: any) => {
+      const { data, error } = await supabase.from("compras_cotacoes").insert(novo).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, vars) => {
+      toast.success("Cotação adicionada!");
+      qc.invalidateQueries({ queryKey: ["compras-cotacoes", vars.requisicao_id] });
+    },
+    onError: (e: Error) => toast.error(`Erro: ${e.message}`)
+  });
+}
+
+export function useAprovarCotacao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ requisicao_id, cotacao_id }: { requisicao_id: string, cotacao_id: string }) => {
+      // 1. Zera todos
+      await supabase.from("compras_cotacoes").update({ vencedora: false }).eq("requisicao_id", requisicao_id);
+      // 2. Marca a vencedora
+      await supabase.from("compras_cotacoes").update({ vencedora: true }).eq("id", cotacao_id);
+      // 3. Muda a requisição para aprovada
+      await supabase.from("compras_requisicoes").update({ status: 'aprovado' }).eq("id", requisicao_id);
+    },
+    onSuccess: (_, vars) => {
+      toast.success("Cotação aprovada e pedido liberado!");
+      qc.invalidateQueries({ queryKey: ["compras-cotacoes", vars.requisicao_id] });
+      qc.invalidateQueries({ queryKey: ["compras-requisicoes"] });
+    },
+    onError: (e: Error) => toast.error(`Erro: ${e.message}`)
+  });
+}

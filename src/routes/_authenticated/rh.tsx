@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Users, LayoutDashboard, ShieldCheck, CalendarRange, MessageSquare } from "lucide-react";
+import { Users, LayoutDashboard, ShieldCheck, CalendarRange, MessageSquare, Building2 } from "lucide-react";
 import { requireModulo } from "@/lib/auth-guards";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RhDashboardTab } from "@/components/rh-dashboard-tab";
@@ -7,6 +7,7 @@ import { RhFuncionariosTab } from "@/components/rh-funcionarios-tab";
 
 import { RhExamesTab } from "@/components/rh-exames-tab";
 import { RhFeriasTab } from "@/components/rh-ferias-tab";
+import { RhTerceirosTab } from "@/components/rh-terceiros-tab";
 import { ChatSetor } from "@/components/chat-setor";
 
 export const Route = createFileRoute("/_authenticated/rh")({
@@ -27,7 +28,7 @@ function RhDashboard() {
       </div>
 
       <Tabs defaultValue="dashboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 max-w-4xl h-auto p-1 bg-muted/50">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 max-w-5xl h-auto p-1 bg-muted/50">
           <TabsTrigger value="dashboard" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <LayoutDashboard className="w-4 h-4 mr-2" />
             Dashboard
@@ -35,6 +36,10 @@ function RhDashboard() {
           <TabsTrigger value="funcionarios" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <Users className="w-4 h-4 mr-2" />
             Funcionários
+          </TabsTrigger>
+          <TabsTrigger value="terceiros" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <Building2 className="w-4 h-4 mr-2" />
+            Terceiros
           </TabsTrigger>
           <TabsTrigger value="exames" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <ShieldCheck className="w-4 h-4 mr-2" />
@@ -57,6 +62,10 @@ function RhDashboard() {
           
           <TabsContent value="funcionarios" className="m-0 focus-visible:outline-none">
             <RhFuncionariosTab />
+          </TabsContent>
+
+          <TabsContent value="terceiros" className="m-0 focus-visible:outline-none">
+            <RhTerceirosTab />
           </TabsContent>
           
           <TabsContent value="exames" className="m-0 focus-visible:outline-none">

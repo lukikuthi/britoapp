@@ -164,12 +164,23 @@ export function useAddRdoTableItem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ table, rdoId, payload }: { table: string; rdoId: string; payload: any }) => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        const { savePendingAction } = await import("@/lib/offline-db");
+        await savePendingAction("rdo", table, "create", { rdo_id: rdoId, ...payload });
+        return { id: "offline-" + Date.now() };
+      }
+
       const { data, error } = await supabase
         .from(table as any)
         .insert({ rdo_id: rdoId, ...payload })
         .select()
         .single();
-      if (error) throw error;
+
+      if (error) {
+        const { savePendingAction } = await import("@/lib/offline-db");
+        await savePendingAction("rdo", table, "create", { rdo_id: rdoId, ...payload });
+        return { id: "offline-" + Date.now() };
+      }
       return data;
     },
     onSuccess: (_, vars) => {
@@ -182,13 +193,24 @@ export function useUpdateRdoTableItem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ table, rdoId, id, payload }: { table: string; rdoId: string; id: string; payload: any }) => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        const { savePendingAction } = await import("@/lib/offline-db");
+        await savePendingAction("rdo", table, "update", { id, ...payload });
+        return { id, ...payload };
+      }
+
       const { data, error } = await supabase
         .from(table as any)
         .update(payload)
         .eq("id", id)
         .select()
         .single();
-      if (error) throw error;
+        
+      if (error) {
+        const { savePendingAction } = await import("@/lib/offline-db");
+        await savePendingAction("rdo", table, "update", { id, ...payload });
+        return { id, ...payload };
+      }
       return data;
     },
     onSuccess: (_, vars) => {
@@ -201,11 +223,21 @@ export function useDeleteRdoTableItem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ table, rdoId, id }: { table: string; rdoId: string; id: string }) => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        const { savePendingAction } = await import("@/lib/offline-db");
+        await savePendingAction("rdo", table, "delete", { id });
+        return true;
+      }
+
       const { error } = await supabase
         .from(table as any)
         .delete()
         .eq("id", id);
-      if (error) throw error;
+        
+      if (error) {
+        const { savePendingAction } = await import("@/lib/offline-db");
+        await savePendingAction("rdo", table, "delete", { id });
+      }
       return true;
     },
     onSuccess: (_, vars) => {

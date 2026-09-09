@@ -788,11 +788,14 @@ function RdoTab({ obraId }: { obraId: string }) {
                 if (code >= 1 && code <= 3) climaStr = "Nublado";
                 if (code >= 51 && code <= 99) climaStr = "Chuvoso";
               }
-              await supabase.from("rdos").update({
-                condicao_tempo_manha: climaStr,
-                condicao_tempo_tarde: climaStr,
-              }).eq("id", rdo.id);
-              toast.success(`Clima automático detectado: ${climaStr}`);
+              const climaCond = climaStr === "Ensolarado" ? "bom" : climaStr === "Nublado" ? "nublado" : "chuva";
+              
+              await supabase.from("rdo_clima").insert([
+                { rdo_id: rdo.id, periodo: "manha", condicao: climaCond, praticavel: climaCond !== "chuva", impacta_prazo: climaCond === "chuva" },
+                { rdo_id: rdo.id, periodo: "tarde", condicao: climaCond, praticavel: climaCond !== "chuva", impacta_prazo: climaCond === "chuva" }
+              ]);
+              
+              toast.success(`Clima automático detectado via satélite: ${climaStr}`);
             }
           }
         } catch (weatherErr) {
