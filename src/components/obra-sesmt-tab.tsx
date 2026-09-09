@@ -20,6 +20,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
+import { SignatureCanvas } from "@/components/signature-canvas";
+
 export function ObraSesmtTab({ obraId, isAdmin }: { obraId: string; isAdmin: boolean }) {
   const ddsQuery = useSesmtDds(obraId);
   const episQuery = useSesmtEpis(obraId);
@@ -45,6 +47,7 @@ export function ObraSesmtTab({ obraId, isAdmin }: { obraId: string; isAdmin: boo
     data_entrega: new Date().toISOString().split("T")[0],
   });
   const [epiFile, setEpiFile] = useState<File | null>(null);
+  const [epiAssinaturaBase64, setEpiAssinaturaBase64] = useState<string>("");
   const epiFileRef = useRef<HTMLInputElement>(null);
 
   const handleSaveDds = async () => {
@@ -81,6 +84,7 @@ export function ObraSesmtTab({ obraId, isAdmin }: { obraId: string; isAdmin: boo
       await createEpi.mutateAsync({
         obra_id: obraId,
         ...epiForm,
+        assinatura_base64: epiAssinaturaBase64,
         file: epiFile,
       });
       toast.success("EPI registrado com sucesso!");
@@ -92,6 +96,7 @@ export function ObraSesmtTab({ obraId, isAdmin }: { obraId: string; isAdmin: boo
         data_entrega: new Date().toISOString().split("T")[0],
       });
       setEpiFile(null);
+      setEpiAssinaturaBase64("");
     } catch (e: any) {
       toast.error("Erro ao registrar EPI: " + e.message);
     }
@@ -244,14 +249,27 @@ export function ObraSesmtTab({ obraId, isAdmin }: { obraId: string; isAdmin: boo
                       <Label>Data de Entrega</Label>
                       <Input type="date" value={epiForm.data_entrega} onChange={e => setEpiForm({...epiForm, data_entrega: e.target.value})} />
                     </div>
-                    <div className="space-y-2">
-                      <Label>Ficha Assinada (Opcional)</Label>
-                      <div className="flex gap-2">
-                        <Input type="file" ref={epiFileRef} className="hidden" accept=".pdf,image/*" onChange={e => setEpiFile(e.target.files?.[0] || null)} />
-                        <Button variant="outline" className="w-full" onClick={() => epiFileRef.current?.click()}>
-                          {epiFile ? epiFile.name : "Anexar Ficha"}
-                        </Button>
-                      </div>
+                  </div>
+                  
+                  <div className="space-y-2 border p-3 rounded-md bg-muted/10">
+                    <Label className="text-sm font-semibold flex justify-between items-center">
+                      Assinatura do Funcionário (Digital)
+                      {epiAssinaturaBase64 && <span className="text-emerald-600 text-xs">Capturada</span>}
+                    </Label>
+                    <div className="bg-white border rounded shadow-inner h-32 relative">
+                      <SignatureCanvas onSave={(base64) => setEpiAssinaturaBase64(base64)} />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground leading-tight mt-1">
+                      Ou anexe a ficha física digitalizada abaixo caso já esteja assinada no papel.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Ficha Assinada (Opcional)</Label>
+                    <div className="flex gap-2">
+                      <Input type="file" ref={epiFileRef} className="hidden" accept=".pdf,image/*" onChange={e => setEpiFile(e.target.files?.[0] || null)} />
+                      <Button variant="outline" className="w-full" onClick={() => epiFileRef.current?.click()}>
+                        {epiFile ? epiFile.name : "Anexar Ficha"}
+                      </Button>
                     </div>
                   </div>
                 </div>

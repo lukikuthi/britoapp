@@ -10,6 +10,8 @@ export interface Concretagem {
   placa_caminhao: string | null;
   volume_m3: number | null;
   fck_projeto: number | null;
+  fck_7dias?: number | null;
+  fck_28dias?: number | null;
   slump_test: string | null;
   local_lancamento: string | null;
   rastreabilidade_corpos_prova: any | null;

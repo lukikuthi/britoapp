@@ -59,6 +59,8 @@ const concretagemSchema = z.object({
   placa_caminhao: z.string().optional(),
   volume_m3: z.coerce.number().optional(),
   fck_projeto: z.coerce.number().optional(),
+  fck_7dias: z.coerce.number().optional(),
+  fck_28dias: z.coerce.number().optional(),
   slump_test: z.string().optional(),
   local_lancamento: z.string().optional(),
   status: z.enum(["agendado", "em_andamento", "concluido", "cancelado"]),
@@ -85,6 +87,8 @@ export function ObraConcretagemTab({ obraId }: { obraId: string }) {
       placa_caminhao: "",
       volume_m3: undefined,
       fck_projeto: undefined,
+      fck_7dias: undefined,
+      fck_28dias: undefined,
       slump_test: "",
       local_lancamento: "",
       status: "agendado",
@@ -103,6 +107,8 @@ export function ObraConcretagemTab({ obraId }: { obraId: string }) {
           placa_caminhao: values.placa_caminhao || null,
           volume_m3: values.volume_m3 || null,
           fck_projeto: values.fck_projeto || null,
+          fck_7dias: values.fck_7dias || null,
+          fck_28dias: values.fck_28dias || null,
           slump_test: values.slump_test || null,
           local_lancamento: values.local_lancamento || null,
           observacoes: values.observacoes || null,
@@ -117,6 +123,8 @@ export function ObraConcretagemTab({ obraId }: { obraId: string }) {
           placa_caminhao: values.placa_caminhao || null,
           volume_m3: values.volume_m3 || null,
           fck_projeto: values.fck_projeto || null,
+          fck_7dias: values.fck_7dias || null,
+          fck_28dias: values.fck_28dias || null,
           slump_test: values.slump_test || null,
           local_lancamento: values.local_lancamento || null,
           observacoes: values.observacoes || null,
@@ -141,6 +149,8 @@ export function ObraConcretagemTab({ obraId }: { obraId: string }) {
       placa_caminhao: concretagem.placa_caminhao || "",
       volume_m3: concretagem.volume_m3 || undefined,
       fck_projeto: concretagem.fck_projeto || undefined,
+      fck_7dias: concretagem.fck_7dias || undefined,
+      fck_28dias: concretagem.fck_28dias || undefined,
       slump_test: concretagem.slump_test || "",
       local_lancamento: concretagem.local_lancamento || "",
       status: concretagem.status,
@@ -170,6 +180,8 @@ export function ObraConcretagemTab({ obraId }: { obraId: string }) {
       placa_caminhao: "",
       volume_m3: undefined,
       fck_projeto: undefined,
+      fck_7dias: undefined,
+      fck_28dias: undefined,
       slump_test: "",
       local_lancamento: "",
       status: "agendado",
@@ -357,6 +369,36 @@ export function ObraConcretagemTab({ obraId }: { obraId: string }) {
                   )}
                 />
 
+                <div className="grid grid-cols-2 gap-4 border p-4 rounded-md bg-muted/20">
+                  <div className="col-span-2 text-sm font-semibold text-muted-foreground mb-2">Controle Tecnológico (Laboratório)</div>
+                  <FormField
+                    control={form.control}
+                    name="fck_7dias"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fck Rompimento 7 Dias (MPa)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.1" placeholder="Ex: 22.5" {...field} value={field.value ?? ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="fck_28dias"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fck Rompimento 28 Dias (MPa)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.1" placeholder="Ex: 31.0" {...field} value={field.value ?? ""} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 <FormField
                   control={form.control}
                   name="observacoes"
@@ -404,7 +446,8 @@ export function ObraConcretagemTab({ obraId }: { obraId: string }) {
                     <TableHead>Fornecedor/Placa</TableHead>
                     <TableHead>Local</TableHead>
                     <TableHead className="text-center">Volume</TableHead>
-                    <TableHead className="text-center">Fck / Slump</TableHead>
+                    <TableHead className="text-center">Fck Projetado / Slump</TableHead>
+                    <TableHead className="text-center">Rompimento (7 e 28 dias)</TableHead>
                     <TableHead className="text-center">Status</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -447,6 +490,14 @@ export function ObraConcretagemTab({ obraId }: { obraId: string }) {
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {item.slump_test || "-"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="text-xs text-muted-foreground">
+                          7d: {item.fck_7dias ? <span className="font-semibold text-primary">{item.fck_7dias} MPa</span> : "-"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          28d: {item.fck_28dias ? <span className="font-semibold text-primary">{item.fck_28dias} MPa</span> : "-"}
                         </div>
                       </TableCell>
                       <TableCell className="text-center">

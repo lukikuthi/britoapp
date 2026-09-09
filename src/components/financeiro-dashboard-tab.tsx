@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useContasBancarias, useTransacoes } from "@/hooks/use-financeiro";
 import { ArrowUpRight, ArrowDownRight, Building, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 export function FinanceiroDashboardTab() {
   const { data: contas, isLoading: loadContas } = useContasBancarias();
@@ -125,6 +126,54 @@ export function FinanceiroDashboardTab() {
         </Card>
       </div>
 
+      {/* Fluxo de Caixa Projetado */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Fluxo de Caixa Projetado</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(() => {
+            if (!transacoes) return <Skeleton className="w-full h-64" />;
+            const futuros = transacoes.filter(t => t.status === 'pendente');
+            const agrupado = new Map<string, { mes: string, receita: number, despesa: number }>();
+            
+            futuros.forEach(t => {
+              const d = new Date(t.data_vencimento);
+              const mesAno = `${d.getMonth() + 1}/${d.getFullYear()}`;
+              if (!agrupado.has(mesAno)) agrupado.set(mesAno, { mes: mesAno, receita: 0, despesa: 0 });
+              
+              const item = agrupado.get(mesAno)!;
+              if (t.tipo === 'receber') item.receita += Number(t.valor);
+              if (t.tipo === 'pagar') item.despesa += Number(t.valor);
+            });
+            
+            const chartData = Array.from(agrupado.values()).sort((a, b) => {
+              const [m1, y1] = a.mes.split('/').map(Number);
+              const [m2, y2] = b.mes.split('/').map(Number);
+              return y1 !== y2 ? y1 - y2 : m1 - m2;
+            });
+            
+            if (chartData.length === 0) return <div className="p-8 text-center text-muted-foreground">Não há lançamentos futuros provisionados.</div>;
+            
+            return (
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="mes" />
+                    <YAxis tickFormatter={(value) => `R$ ${value / 1000}k`} />
+                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                    <Legend />
+                    <Bar dataKey="receita" name="A Receber" fill="#10b981" />
+                    <Bar dataKey="despesa" name="A Pagar" fill="#ef4444" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            );
+          })()}
+        </CardContent>
+      </Card>
+
       {/* DRE por Obra */}
       <Card>
         <CardHeader>
@@ -149,16 +198,26 @@ export function FinanceiroDashboardTab() {
                   const dreMap = new Map<string, { nome: string, receita: number, despesa: number }>();
                   
                   transacoes.filter(t => t.status === 'pago' || t.status === 'recebido').forEach(t => {
-                    const obraId = t.obra_id || 'sem_obra';
-                    const obraNome = t.obra?.nome || 'Despesas Gerais (Matriz)';
-                    
-                    if (!dreMap.has(obraId)) {
-                      dreMap.set(obraId, { nome: obraNome, receita: 0, despesa: 0 });
+                    if (t.rateios && t.rateios.length > 0) {
+                      t.rateios.forEach((r: any) => {
+                        const obraId = r.obra_id || 'sem_obra';
+                        const obraNome = r.obra?.nome || 'Despesas Gerais (Matriz)';
+                        
+                        if (!dreMap.has(obraId)) dreMap.set(obraId, { nome: obraNome, receita: 0, despesa: 0 });
+                        const dre = dreMap.get(obraId)!;
+                        if (t.tipo === 'receber') dre.receita += Number(r.valor_rateado);
+                        if (t.tipo === 'pagar') dre.despesa += Number(r.valor_rateado);
+                      });
+                    } else {
+                      const obraId = t.obra_id || 'sem_obra';
+                      const obraNome = t.obra?.nome || 'Despesas Gerais (Matriz)';
+                      
+                      if (!dreMap.has(obraId)) dreMap.set(obraId, { nome: obraNome, receita: 0, despesa: 0 });
+                      
+                      const dre = dreMap.get(obraId)!;
+                      if (t.tipo === 'receber') dre.receita += Number(t.valor);
+                      if (t.tipo === 'pagar') dre.despesa += Number(t.valor);
                     }
-                    
-                    const dre = dreMap.get(obraId)!;
-                    if (t.tipo === 'receber') dre.receita += Number(t.valor);
-                    if (t.tipo === 'pagar') dre.despesa += Number(t.valor);
                   });
                   
                   const rows = Array.from(dreMap.values());

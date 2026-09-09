@@ -22,6 +22,7 @@ export interface SesmtEpi {
   data_entrega: string;
   data_devolucao: string | null;
   termo_assinado_path: string | null;
+  assinatura_base64: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -115,6 +116,7 @@ export function useCreateEpi() {
       equipamento: string;
       ca_numero?: string;
       data_entrega: string;
+      assinatura_base64?: string | null;
       file?: File | null;
     }) => {
       let arquivoPath = null;
@@ -139,6 +141,7 @@ export function useCreateEpi() {
           ca_numero: payload.ca_numero || null,
           data_entrega: payload.data_entrega,
           termo_assinado_path: arquivoPath,
+          assinatura_base64: payload.assinatura_base64 || null,
         })
         .select()
         .single();
