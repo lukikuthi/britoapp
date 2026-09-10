@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 
 // Cláusulas fixas do rodapé (padrão Brito Engenharia)
@@ -179,7 +179,7 @@ export function gerarPdfPedidoCompra(pedido: any) {
     `R$ ${(Number(i.quantidade || 0) * Number(i.valor_unitario || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
   ]);
 
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: y,
     head: [["QUANT.", "UNID.", "DESCRIÇÃO:", "R$ unit.", "R$ TOTAL"]],
     body: tableBody,
