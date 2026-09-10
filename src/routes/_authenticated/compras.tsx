@@ -10,6 +10,8 @@ import { ComprasBoletosTab } from "@/components/compras-boletos-tab";
 import { ComprasMensagensTab } from "@/components/compras-mensagens-tab";
 import { ComprasRequisicoesTab } from "@/components/compras-requisicoes-tab";
 
+import { ComprasPedidosTab } from "@/components/compras-pedidos-tab";
+
 export const Route = createFileRoute("/_authenticated/compras")({
   head: () => ({ meta: [{ title: "Compras — BRITO ENGENHARIA" }] }),
   beforeLoad: async () => await requireModulo("compras"),
@@ -24,18 +26,22 @@ function ComprasDashboard() {
           <ShoppingCart className="size-8 text-amber-500" />
           Setor de Compras e Suprimentos
         </h1>
-        <p className="text-muted-foreground mt-1">Gestão de estoque, certificados, emissão de boletos e requisições.</p>
+        <p className="text-muted-foreground mt-1">Gestão de estoque, certificados, emissão de boletos, requisições e pedidos de compra.</p>
       </div>
 
       <Tabs defaultValue="dashboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6 max-w-5xl h-auto p-1 bg-muted/50">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-7 max-w-6xl h-auto p-1 bg-muted/50">
           <TabsTrigger value="dashboard" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <LayoutDashboard className="w-4 h-4 mr-2" />
             Painel Geral
           </TabsTrigger>
           <TabsTrigger value="pedidos" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <ClipboardList className="w-4 h-4 mr-2" />
-            Pedidos (Obra)
+            Requisições (Obra)
+          </TabsTrigger>
+          <TabsTrigger value="geracao-pedidos" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <FileText className="w-4 h-4 mr-2" />
+            Emissão P.C.
           </TabsTrigger>
           <TabsTrigger value="estoque" className="py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
             <PackageOpen className="w-4 h-4 mr-2" />
@@ -62,6 +68,10 @@ function ComprasDashboard() {
           
           <TabsContent value="pedidos" className="m-0 focus-visible:outline-none">
             <ComprasRequisicoesTab />
+          </TabsContent>
+
+          <TabsContent value="geracao-pedidos" className="m-0 focus-visible:outline-none">
+            <ComprasPedidosTab />
           </TabsContent>
 
           <TabsContent value="estoque" className="m-0 focus-visible:outline-none">

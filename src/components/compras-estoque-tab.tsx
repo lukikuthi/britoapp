@@ -10,6 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Loader2, Wrench, Package, HardHat } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import * as xlsx from "xlsx";
+import { toast } from "sonner";
+import { useImportarPlanilhaFerramentas } from "@/hooks/use-compras";
 
 const FORM_INITIAL = { nome: "", tipo: "material", obra_id: "matriz", quantidade_atual: 0, limite_minimo: 0 };
 
@@ -40,6 +43,82 @@ export function ComprasEstoqueTab() {
     setOpen(false);
   };
 
+  const importMutation = useImportarPlanilhaFerramentas();
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = xlsx.read(bstr, { type: 'binary' });
+        
+        let sheetName = "";
+        if (wb.SheetNames.includes("Ferramentas")) sheetName = "Ferramentas";
+        else if (wb.SheetNames.includes("Materiais Diversos")) sheetName = "Materiais Diversos";
+        else sheetName = wb.SheetNames[0];
+
+        const ws = wb.Sheets[sheetName];
+        const data = xlsx.utils.sheet_to_json(ws, { header: 1 }) as any[][];
+        
+        // As abas tem um header na linha 2 (index 1) no modelo da empresa Brito
+        const itensToInsert = [];
+        
+        // Pula as primeiras 2 linhas que são cabeçalhos
+        for (let i = 2; i < data.length; i++) {
+          const row = data[i];
+          if (!row || row.length < 2) continue; // Pula linha vazia
+          
+          const patrimonio = row[0]; // Nº Patrimônio
+          const nome = row[1]; // Descrição do item
+          const num_pedido = row[2];
+          
+          // Tratamento de datas do Excel (se vier numérico)
+          let data_compra = null;
+          if (row[3]) {
+             if (typeof row[3] === 'number') {
+                const dateObj = new Date(Math.round((row[3] - 25569) * 86400 * 1000));
+                data_compra = dateObj.toISOString().split('T')[0];
+             } else {
+                data_compra = row[3];
+             }
+          }
+          
+          const nf = row[4];
+          const valor = row[5]; // Valor do equipamento
+          const fornecedor = sheetName === "Ferramentas" ? row[7] : row[12]; // Ferramentas: col H (7), Materiais: col M (12)
+          
+          if (nome) {
+            itensToInsert.push({
+              nome,
+              tipo: sheetName === "Ferramentas" ? "ferramenta" : "material",
+              patrimonio: patrimonio || null,
+              data_compra: data_compra,
+              nf: nf?.toString() || null,
+              valor_equipamento: typeof valor === 'number' ? valor : 0,
+              fornecedor_nome: fornecedor || null,
+              num_pedido: num_pedido || null,
+              quantidade_atual: 1, // Geralmente ferramentas vêm 1 por linha com patrimônio
+              limite_minimo: 0,
+            });
+          }
+        }
+        
+        if (itensToInsert.length > 0) {
+          await importMutation.mutateAsync(itensToInsert);
+        } else {
+          toast.error("Nenhum item válido encontrado na planilha.");
+        }
+      } catch (err: any) {
+        toast.error("Erro ao processar planilha: " + err.message);
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = ''; // reseta o input
+  };
+
   const filtered = estoque?.filter(i => i.nome.toLowerCase().includes(search.toLowerCase()));
 
   const getTypeIcon = (tipo: string) => {
@@ -65,10 +144,24 @@ export function ComprasEstoqueTab() {
           />
         </div>
 
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setForm(FORM_INITIAL); }}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" /> Novo Item</Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <div className="relative">
+            <Input 
+              type="file" 
+              accept=".xlsx,.xls" 
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              onChange={handleFileUpload}
+              title="Importar Planilha do Estoque Brito"
+            />
+            <Button variant="outline" className="pointer-events-none" disabled={importMutation.isPending}>
+              {importMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Package className="mr-2 h-4 w-4" />}
+              {importMutation.isPending ? "Importando..." : "Importar Planilha"}
+            </Button>
+          </div>
+          <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setForm(FORM_INITIAL); }}>
+            <DialogTrigger asChild>
+              <Button><Plus className="mr-2 h-4 w-4" /> Novo Item</Button>
+            </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Cadastrar no Estoque</DialogTitle>
@@ -118,6 +211,7 @@ export function ComprasEstoqueTab() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>
