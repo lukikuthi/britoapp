@@ -32,6 +32,35 @@ interface Obra {
   status: "em_andamento" | "pausada" | "concluida";
   descricao: string | null;
   cliente_id: string | null;
+  tipo_escopo?: string;
+  // Faturamento
+  faturamento_razao_social?: string | null;
+  faturamento_cnpj?: string | null;
+  faturamento_cno?: string | null;
+  faturamento_endereco?: string | null;
+  faturamento_bairro?: string | null;
+  faturamento_municipio?: string | null;
+  faturamento_cep?: string | null;
+  faturamento_inscricao_estadual?: string | null;
+  faturamento_telefone?: string | null;
+  faturamento_contato?: string | null;
+  // Cobrança
+  cobranca_razao_social?: string | null;
+  cobranca_cnpj?: string | null;
+  cobranca_cno?: string | null;
+  cobranca_endereco?: string | null;
+  cobranca_bairro?: string | null;
+  cobranca_municipio?: string | null;
+  cobranca_cep?: string | null;
+  cobranca_inscricao_estadual?: string | null;
+  cobranca_telefone?: string | null;
+  cobranca_contato?: string | null;
+  // Entrega
+  entrega_cno?: string | null;
+  entrega_bairro?: string | null;
+  entrega_cep?: string | null;
+  entrega_telefone?: string | null;
+  entrega_contato?: string | null;
 }
 
 interface ProfileLite { id: string; nome: string; email: string | null }
@@ -150,10 +179,40 @@ function ObraDialog({ obra, onClose }: { obra: Obra | null; onClose: () => void 
     data_inicio: obra?.data_inicio ?? "",
     data_prevista_termino: obra?.data_prevista_termino ?? "",
     status: obra?.status ?? "em_andamento",
-    tipo_escopo: obra?.tipo_escopo ?? "global",
+    tipo_escopo: (obra as any)?.tipo_escopo ?? "global",
     descricao: obra?.descricao ?? "",
     cliente_id: obra?.cliente_id ?? "",
+    // Faturamento
+    faturamento_razao_social: obra?.faturamento_razao_social ?? "",
+    faturamento_cnpj: obra?.faturamento_cnpj ?? "",
+    faturamento_cno: obra?.faturamento_cno ?? "",
+    faturamento_endereco: obra?.faturamento_endereco ?? "",
+    faturamento_bairro: obra?.faturamento_bairro ?? "",
+    faturamento_municipio: obra?.faturamento_municipio ?? "",
+    faturamento_cep: obra?.faturamento_cep ?? "",
+    faturamento_inscricao_estadual: obra?.faturamento_inscricao_estadual ?? "",
+    faturamento_telefone: obra?.faturamento_telefone ?? "",
+    faturamento_contato: obra?.faturamento_contato ?? "",
+    // Cobrança
+    cobranca_razao_social: obra?.cobranca_razao_social ?? "",
+    cobranca_cnpj: obra?.cobranca_cnpj ?? "",
+    cobranca_cno: obra?.cobranca_cno ?? "",
+    cobranca_endereco: obra?.cobranca_endereco ?? "",
+    cobranca_bairro: obra?.cobranca_bairro ?? "",
+    cobranca_municipio: obra?.cobranca_municipio ?? "",
+    cobranca_cep: obra?.cobranca_cep ?? "",
+    cobranca_inscricao_estadual: obra?.cobranca_inscricao_estadual ?? "",
+    cobranca_telefone: obra?.cobranca_telefone ?? "",
+    cobranca_contato: obra?.cobranca_contato ?? "",
+    // Entrega
+    entrega_cno: obra?.entrega_cno ?? "",
+    entrega_bairro: obra?.entrega_bairro ?? "",
+    entrega_cep: obra?.entrega_cep ?? "",
+    entrega_telefone: obra?.entrega_telefone ?? "",
+    entrega_contato: obra?.entrega_contato ?? "",
   });
+
+  const [cobrancaIgual, setCobrancaIgual] = useState(true);
 
   const clientes = useQuery({
     queryKey: ["users-clientes"],
@@ -178,6 +237,31 @@ function ObraDialog({ obra, onClose }: { obra: Obra | null; onClose: () => void 
 
   const save = useMutation({
     mutationFn: async () => {
+      // Se cobrança é igual ao faturamento, copiar campos
+      const cob = cobrancaIgual ? {
+        cobranca_razao_social: form.faturamento_razao_social || null,
+        cobranca_cnpj: form.faturamento_cnpj || null,
+        cobranca_cno: form.faturamento_cno || null,
+        cobranca_endereco: form.faturamento_endereco || null,
+        cobranca_bairro: form.faturamento_bairro || null,
+        cobranca_municipio: form.faturamento_municipio || null,
+        cobranca_cep: form.faturamento_cep || null,
+        cobranca_inscricao_estadual: form.faturamento_inscricao_estadual || null,
+        cobranca_telefone: form.faturamento_telefone || null,
+        cobranca_contato: form.faturamento_contato || null,
+      } : {
+        cobranca_razao_social: form.cobranca_razao_social || null,
+        cobranca_cnpj: form.cobranca_cnpj || null,
+        cobranca_cno: form.cobranca_cno || null,
+        cobranca_endereco: form.cobranca_endereco || null,
+        cobranca_bairro: form.cobranca_bairro || null,
+        cobranca_municipio: form.cobranca_municipio || null,
+        cobranca_cep: form.cobranca_cep || null,
+        cobranca_inscricao_estadual: form.cobranca_inscricao_estadual || null,
+        cobranca_telefone: form.cobranca_telefone || null,
+        cobranca_contato: form.cobranca_contato || null,
+      };
+
       const payload = {
         nome: form.nome.trim(),
         endereco: form.endereco || null,
@@ -192,6 +276,25 @@ function ObraDialog({ obra, onClose }: { obra: Obra | null; onClose: () => void 
         tipo_escopo: form.tipo_escopo,
         descricao: form.descricao || null,
         cliente_id: form.cliente_id || null,
+        // Faturamento
+        faturamento_razao_social: form.faturamento_razao_social || null,
+        faturamento_cnpj: form.faturamento_cnpj || null,
+        faturamento_cno: form.faturamento_cno || null,
+        faturamento_endereco: form.faturamento_endereco || null,
+        faturamento_bairro: form.faturamento_bairro || null,
+        faturamento_municipio: form.faturamento_municipio || null,
+        faturamento_cep: form.faturamento_cep || null,
+        faturamento_inscricao_estadual: form.faturamento_inscricao_estadual || null,
+        faturamento_telefone: form.faturamento_telefone || null,
+        faturamento_contato: form.faturamento_contato || null,
+        // Cobrança (copiada ou manual)
+        ...cob,
+        // Entrega
+        entrega_cno: form.entrega_cno || null,
+        entrega_bairro: form.entrega_bairro || null,
+        entrega_cep: form.entrega_cep || null,
+        entrega_telefone: form.entrega_telefone || null,
+        entrega_contato: form.entrega_contato || null,
       };
       if (isEdit) {
         const { error } = await supabase.from("obras").update(payload).eq("id", obra!.id);
@@ -315,6 +418,80 @@ function ObraDialog({ obra, onClose }: { obra: Obra | null; onClose: () => void 
           <Label>Descrição</Label>
           <Textarea rows={3} value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />
         </div>
+
+        {/* ========= DADOS PARA FATURAMENTO ========= */}
+        <details className="border rounded-md p-3 bg-muted/20" open={!!form.faturamento_razao_social}>
+          <summary className="font-semibold cursor-pointer text-sm">📄 Dados para Faturamento (Pedido de Compra)</summary>
+          <div className="mt-3 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1"><Label className="text-xs">Razão Social</Label><Input value={form.faturamento_razao_social} onChange={e => setForm({...form, faturamento_razao_social: e.target.value})} /></div>
+              <div className="space-y-1"><Label className="text-xs">CNO</Label><Input value={form.faturamento_cno} onChange={e => setForm({...form, faturamento_cno: e.target.value})} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1"><Label className="text-xs">CNPJ</Label><Input value={form.faturamento_cnpj} onChange={e => setForm({...form, faturamento_cnpj: e.target.value})} /></div>
+              <div className="space-y-1"><Label className="text-xs">Inscrição Estadual</Label><Input value={form.faturamento_inscricao_estadual} onChange={e => setForm({...form, faturamento_inscricao_estadual: e.target.value})} /></div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1"><Label className="text-xs">Endereço</Label><Input value={form.faturamento_endereco} onChange={e => setForm({...form, faturamento_endereco: e.target.value})} /></div>
+              <div className="space-y-1"><Label className="text-xs">Bairro</Label><Input value={form.faturamento_bairro} onChange={e => setForm({...form, faturamento_bairro: e.target.value})} /></div>
+              <div className="space-y-1"><Label className="text-xs">Município</Label><Input value={form.faturamento_municipio} onChange={e => setForm({...form, faturamento_municipio: e.target.value})} /></div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1"><Label className="text-xs">CEP</Label><Input value={form.faturamento_cep} onChange={e => setForm({...form, faturamento_cep: e.target.value})} /></div>
+              <div className="space-y-1"><Label className="text-xs">Telefone</Label><Input value={form.faturamento_telefone} onChange={e => setForm({...form, faturamento_telefone: e.target.value})} /></div>
+              <div className="space-y-1"><Label className="text-xs">Contato</Label><Input value={form.faturamento_contato} onChange={e => setForm({...form, faturamento_contato: e.target.value})} /></div>
+            </div>
+          </div>
+        </details>
+
+        {/* ========= DADOS PARA COBRANÇA ========= */}
+        <details className="border rounded-md p-3 bg-muted/20">
+          <summary className="font-semibold cursor-pointer text-sm">
+            💰 Dados para Cobrança
+            <label className="ml-3 text-xs font-normal text-muted-foreground cursor-pointer">
+              <input type="checkbox" className="mr-1" checked={cobrancaIgual} onChange={e => setCobrancaIgual(e.target.checked)} />
+              Igual ao Faturamento
+            </label>
+          </summary>
+          {!cobrancaIgual && (
+            <div className="mt-3 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1"><Label className="text-xs">Razão Social</Label><Input value={form.cobranca_razao_social} onChange={e => setForm({...form, cobranca_razao_social: e.target.value})} /></div>
+                <div className="space-y-1"><Label className="text-xs">CNO</Label><Input value={form.cobranca_cno} onChange={e => setForm({...form, cobranca_cno: e.target.value})} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1"><Label className="text-xs">CNPJ</Label><Input value={form.cobranca_cnpj} onChange={e => setForm({...form, cobranca_cnpj: e.target.value})} /></div>
+                <div className="space-y-1"><Label className="text-xs">Inscrição Estadual</Label><Input value={form.cobranca_inscricao_estadual} onChange={e => setForm({...form, cobranca_inscricao_estadual: e.target.value})} /></div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1"><Label className="text-xs">Endereço</Label><Input value={form.cobranca_endereco} onChange={e => setForm({...form, cobranca_endereco: e.target.value})} /></div>
+                <div className="space-y-1"><Label className="text-xs">Bairro</Label><Input value={form.cobranca_bairro} onChange={e => setForm({...form, cobranca_bairro: e.target.value})} /></div>
+                <div className="space-y-1"><Label className="text-xs">Município</Label><Input value={form.cobranca_municipio} onChange={e => setForm({...form, cobranca_municipio: e.target.value})} /></div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1"><Label className="text-xs">CEP</Label><Input value={form.cobranca_cep} onChange={e => setForm({...form, cobranca_cep: e.target.value})} /></div>
+                <div className="space-y-1"><Label className="text-xs">Telefone</Label><Input value={form.cobranca_telefone} onChange={e => setForm({...form, cobranca_telefone: e.target.value})} /></div>
+                <div className="space-y-1"><Label className="text-xs">Contato</Label><Input value={form.cobranca_contato} onChange={e => setForm({...form, cobranca_contato: e.target.value})} /></div>
+              </div>
+            </div>
+          )}
+        </details>
+
+        {/* ========= DADOS PARA ENTREGA ========= */}
+        <details className="border rounded-md p-3 bg-muted/20" open={!!form.entrega_cno}>
+          <summary className="font-semibold cursor-pointer text-sm">🚚 Dados para Entrega (complementar ao endereço da obra)</summary>
+          <div className="mt-3 space-y-3">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1"><Label className="text-xs">CNO</Label><Input value={form.entrega_cno} onChange={e => setForm({...form, entrega_cno: e.target.value})} /></div>
+              <div className="space-y-1"><Label className="text-xs">Bairro</Label><Input value={form.entrega_bairro} onChange={e => setForm({...form, entrega_bairro: e.target.value})} /></div>
+              <div className="space-y-1"><Label className="text-xs">CEP</Label><Input value={form.entrega_cep} onChange={e => setForm({...form, entrega_cep: e.target.value})} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1"><Label className="text-xs">Telefone</Label><Input value={form.entrega_telefone} onChange={e => setForm({...form, entrega_telefone: e.target.value})} /></div>
+              <div className="space-y-1"><Label className="text-xs">Contato</Label><Input value={form.entrega_contato} onChange={e => setForm({...form, entrega_contato: e.target.value})} /></div>
+            </div>
+          </div>
+        </details>
 
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
