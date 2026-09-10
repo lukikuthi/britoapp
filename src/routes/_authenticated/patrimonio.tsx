@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Wrench, ArrowRightLeft, ShieldAlert } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { requireModuleAccess } from "@/lib/auth-guards";
+import { requireModulo } from "@/lib/auth-guards";
 import { PatrimonioInventarioTab } from "@/components/patrimonio-inventario-tab";
 import { PatrimonioMovimentacaoTab } from "@/components/patrimonio-movimentacao-tab";
 import { PatrimonioManutencaoTab } from "@/components/patrimonio-manutencao-tab";
 
 export const Route = createFileRoute("/_authenticated/patrimonio")({
-  beforeLoad: ({ context }) => requireModuleAccess(context, "suprimentos"),
+  beforeLoad: async () => await requireModulo("suprimentos" as any),
   component: PatrimonioPage,
 });
 
