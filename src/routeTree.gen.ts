@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRhRouteImport } from './routes/_authenticated/rh'
+import { Route as AuthenticatedPatrimonioRouteImport } from './routes/_authenticated/patrimonio'
 import { Route as AuthenticatedNotesRouteImport } from './routes/_authenticated/notes'
 import { Route as AuthenticatedHubRouteImport } from './routes/_authenticated/hub'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
@@ -48,6 +49,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedRhRoute = AuthenticatedRhRouteImport.update({
   id: '/rh',
   path: '/rh',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPatrimonioRoute = AuthenticatedPatrimonioRouteImport.update({
+  id: '/patrimonio',
+  path: '/patrimonio',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedNotesRoute = AuthenticatedNotesRouteImport.update({
@@ -154,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/hub': typeof AuthenticatedHubRoute
   '/notes': typeof AuthenticatedNotesRoute
+  '/patrimonio': typeof AuthenticatedPatrimonioRoute
   '/rh': typeof AuthenticatedRhRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/backup': typeof AuthenticatedAdminBackupRoute
@@ -176,6 +183,7 @@ export interface FileRoutesByTo {
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/hub': typeof AuthenticatedHubRoute
   '/notes': typeof AuthenticatedNotesRoute
+  '/patrimonio': typeof AuthenticatedPatrimonioRoute
   '/rh': typeof AuthenticatedRhRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/backup': typeof AuthenticatedAdminBackupRoute
@@ -200,6 +208,7 @@ export interface FileRoutesById {
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/hub': typeof AuthenticatedHubRoute
   '/_authenticated/notes': typeof AuthenticatedNotesRoute
+  '/_authenticated/patrimonio': typeof AuthenticatedPatrimonioRoute
   '/_authenticated/rh': typeof AuthenticatedRhRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/backup': typeof AuthenticatedAdminBackupRoute
@@ -224,6 +233,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/hub'
     | '/notes'
+    | '/patrimonio'
     | '/rh'
     | '/admin/audit'
     | '/admin/backup'
@@ -246,6 +256,7 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/hub'
     | '/notes'
+    | '/patrimonio'
     | '/rh'
     | '/admin/audit'
     | '/admin/backup'
@@ -269,6 +280,7 @@ export interface FileRouteTypes {
     | '/_authenticated/financeiro'
     | '/_authenticated/hub'
     | '/_authenticated/notes'
+    | '/_authenticated/patrimonio'
     | '/_authenticated/rh'
     | '/_authenticated/admin/audit'
     | '/_authenticated/admin/backup'
@@ -316,6 +328,13 @@ declare module '@tanstack/react-router' {
       path: '/rh'
       fullPath: '/rh'
       preLoaderRoute: typeof AuthenticatedRhRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/patrimonio': {
+      id: '/_authenticated/patrimonio'
+      path: '/patrimonio'
+      fullPath: '/patrimonio'
+      preLoaderRoute: typeof AuthenticatedPatrimonioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/notes': {
@@ -484,6 +503,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedHubRoute: typeof AuthenticatedHubRoute
   AuthenticatedNotesRoute: typeof AuthenticatedNotesRoute
+  AuthenticatedPatrimonioRoute: typeof AuthenticatedPatrimonioRoute
   AuthenticatedRhRoute: typeof AuthenticatedRhRoute
   AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
   AuthenticatedAdminBackupRoute: typeof AuthenticatedAdminBackupRoute
@@ -501,6 +521,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedHubRoute: AuthenticatedHubRoute,
   AuthenticatedNotesRoute: AuthenticatedNotesRoute,
+  AuthenticatedPatrimonioRoute: AuthenticatedPatrimonioRoute,
   AuthenticatedRhRoute: AuthenticatedRhRoute,
   AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
   AuthenticatedAdminBackupRoute: AuthenticatedAdminBackupRoute,
